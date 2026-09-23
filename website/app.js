@@ -411,7 +411,8 @@ function renderHome() {
     <div class="section-title"><h2>今日推荐</h2><a data-nav="plan">更多 ›</a></div>
     ${recommendPlan()}
     <div class="section-title"><h2>快捷入口</h2></div>
-    <div class="quick">
+    <div class="quick q5">
+      <div class="q" data-lib><i>📚</i>动作库</div>
       <div class="q" data-nav="plan"><i>💪</i>开始训练</div>
       <div class="q" data-nav="diet"><i>🥗</i>饮食记录</div>
       <div class="q" data-nav="stats"><i>📊</i>数据统计</div>
@@ -442,6 +443,7 @@ function planCard(p) {
 function bindPlanCards() {
   $$('#app .plan-card').forEach(el => el.addEventListener('click', () => openWorkout(el.dataset.plan)));
   $$('#app [data-nav]').forEach(el => el.addEventListener('click', () => showTab(el.dataset.nav)));
+  $$('#app [data-lib]').forEach(el => el.addEventListener('click', openLibrary));
 }
 
 /* ================= 计划页 ================= */
@@ -451,6 +453,11 @@ function renderPlan() {
   const list = PLANS.filter(p => planFilter === '全部' || p.goal === planFilter);
   $('#app').innerHTML = `
     <div class="page-head"><h1>训练计划</h1><p>${PLANS.length} 套专业计划 · 按目标筛选 · 一键开练</p></div>
+    <button class="lib-entry" type="button" data-lib>
+      <span class="le-ic">📚</span>
+      <span class="le-tx"><b>动作库</b><small>43 个标准动作 · GIF 演示 · 部位与器械说明</small></span>
+      <span class="le-go">浏览 ›</span>
+    </button>
     <div class="chips">${goals.map(g => `<span class="chip ${planFilter === g ? 'active' : ''}" data-g="${g}">${g}</span>`).join('')}</div>
     <div style="margin-top:12px">${list.map(planCard).join('') || '<div class="empty"><i>🤸</i>该目标下暂无计划</div>'}</div>
   `;
@@ -572,7 +579,9 @@ function openWorkout(planId, saved) {
           <div class="ex-list" style="margin-top:10px">
             ${p.exercises.map((n, i) => {
               const ex = EXERCISES.find(e => e.name === n) || { minutes: 4, kcal: 30 };
+              const thumb = thumbFor(n);
               return `<button type="button" class="ex-row ${workout.done.includes(i) ? 'done' : ''}" data-i="${i}">
+                ${thumb ? `<span class="ex-thumb"><img loading="lazy" src="${thumb}" alt=""></span>` : ''}
                 <span class="ex-idx">${i + 1}</span>
                 <span class="ex-info"><span class="exn">${esc(n)}</span><span class="exm">${ex.minutes}分钟 · ${ex.kcal}千卡</span></span>
                 <span class="ex-state"></span>
@@ -583,6 +592,7 @@ function openWorkout(planId, saved) {
       </div>
     </div>
     <div class="wk-foot">
+      <div class="wk-next" id="wkNext"></div>
       <button class="btn mega" id="wkMega">✓ 完成第 1 个动作</button>
     </div>`;
   document.body.appendChild(sub);
@@ -704,8 +714,17 @@ function updateMega() {
   const btn = $('#wkMega', workoutSub);
   if (!btn) return;
   const next = nextUndone();
-  if (next === null) { btn.textContent = '💾 保存训练记录'; btn.classList.add('finish'); }
-  else { btn.textContent = `✓ 完成第 ${next + 1} 个动作`; btn.classList.remove('finish'); }
+  if (next === null) {
+    btn.textContent = '💾 保存训练记录'; btn.classList.add('finish');
+  } else {
+    btn.textContent = `✓ 完成第 ${next + 1} 个动作`; btn.classList.remove('finish');
+  }
+  const p = PLANS.find(x => x.id === workout.planId);
+  const nextEl = $('#wkNext', workoutSub);
+  if (nextEl) {
+    if (next === null) nextEl.textContent = `🎉 全部 ${p.exercises.length} 个动作已完成`;
+    else nextEl.textContent = `下一个 · ${p.exercises[next]}`;
+  }
 }
 function saveWorkout() {
   const p = PLANS.find(x => x.id === workout.planId);
@@ -730,6 +749,182 @@ function exitWorkout() {
     setTimeout(() => el.remove(), 220);
     workoutSub = null;
   }
+}
+
+/* ================= 动作库 ================= */
+const MEDIA_BASE = 'https://cdn.jsdelivr.net.cn/gh/hasaneyldrm/exercises-dataset@main/';
+
+const EQUIP_SVG = {
+  bar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12h2"/><path d="M20 12h2"/><path d="M6 8v8"/><path d="M18 8v8"/><path d="M6 12h12"/></svg>',
+  dumb: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6.5 9.5v5"/><path d="M17.5 9.5v5"/><path d="M6 8v8"/><path d="M18 8v8"/><path d="M7 12h10"/></svg>',
+  cable: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="4" y="3" width="16" height="5" rx="1"/><path d="M12 8v4"/><circle cx="12" cy="15" r="3"/></svg>',
+  kb: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 7a3 3 0 1 1 6 0"/><path d="M6.5 20c0-4 2.5-7 5.5-7s5.5 3 5.5 7"/></svg>',
+  bw: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="5" r="2"/><path d="M12 8v6"/><path d="M7 11l5 2 5-2"/><path d="M9 20l3-6 3 6"/></svg>',
+  rope: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6c2-3 4 3 6 0s4 3 6 0 4 3 6 0"/></svg>'
+};
+
+let libData = null;
+let libFilter = '全部';
+let libQuery = '';
+let libIo = null;
+const LIB_GROUPS = ['全部', '臀腿', '胸背', '肩臂', '核心'];
+
+async function loadLib() {
+  if (libData) return libData;
+  const res = await fetch('exercises-lib.json');
+  if (!res.ok) throw new Error('lib fetch failed');
+  libData = await res.json();
+  return libData;
+}
+
+function closeSub(sub) {
+  sub.classList.remove('show');
+  setTimeout(() => sub.remove(), 220);
+}
+
+function ensureLibIo() {
+  if (libIo) return libIo;
+  libIo = new IntersectionObserver((entries) => {
+    entries.forEach((en) => {
+      const img = en.target;
+      if (en.isIntersecting) {
+        if (img.dataset.state !== 'gif') { img.src = MEDIA_BASE + img.dataset.gif; img.dataset.state = 'gif'; }
+      } else if (img.dataset.state === 'gif') {
+        img.src = MEDIA_BASE + img.dataset.jpg; img.dataset.state = 'jpg';
+      }
+    });
+  }, { rootMargin: '120px' });
+  return libIo;
+}
+
+function libCard(x) {
+  return `<button type="button" class="lib-card" data-id="${x.id}">
+    <span class="lc-media">
+      <img class="lc-img" alt="${esc(x.n)}" data-gif="${esc(x.gif)}" data-jpg="${esc(x.img)}" data-state="jpg" loading="lazy" src="${MEDIA_BASE}${esc(x.img)}">
+    </span>
+    <span class="lc-body">
+      <span class="lc-name">${esc(x.n)}</span>
+      <span class="lc-tags">
+        <span class="lc-pill p">${esc(x.t)}</span>
+        <span class="lc-pill e">${EQUIP_SVG[x.k] || ''}${esc(x.e)}</span>
+      </span>
+    </span>
+  </button>`;
+}
+
+function openLibrary() {
+  const sub = document.createElement('div');
+  sub.className = 'subpage lib-page';
+  sub.innerHTML = `
+    <div class="sp-head">
+      <button class="icon-btn back" aria-label="返回">‹</button>
+      <b>动作库</b>
+      <span class="sp-side"></span>
+    </div>
+    <div class="sp-body">
+      <input class="lib-search" id="libSearch" placeholder="搜索动作，如：深蹲、卧推、硬拉" type="search">
+      <div class="chips">${LIB_GROUPS.map(g => `<span class="chip ${libFilter === g ? 'active' : ''}" data-g="${g}">${g}</span>`).join('')}</div>
+      <div class="lib-grid" id="libGrid"><div class="lib-loading">正在加载动作…</div></div>
+    </div>`;
+  document.body.appendChild(sub);
+  requestAnimationFrame(() => sub.classList.add('show'));
+  $('.back', sub).addEventListener('click', () => closeSub(sub));
+  $('#libSearch', sub).addEventListener('input', (e) => { libQuery = e.target.value.trim().toLowerCase(); renderLibGrid(sub); });
+  $$('.chip', sub).forEach(c => c.addEventListener('click', () => {
+    libFilter = c.dataset.g;
+    $$('.chip', sub).forEach(x => x.classList.toggle('active', x === c));
+    renderLibGrid(sub);
+  }));
+  loadLib()
+    .then(() => renderLibGrid(sub))
+    .catch(() => { $('#libGrid', sub).innerHTML = '<div class="lib-loading">加载失败，请检查网络后重试</div>'; });
+}
+
+function renderLibGrid(sub) {
+  const grid = $('#libGrid', sub);
+  if (!libData) return;
+  const list = libData.filter(x =>
+    (libFilter === '全部' || x.g === libFilter) &&
+    (!libQuery || x.n.toLowerCase().includes(libQuery) || x.t.toLowerCase().includes(libQuery)));
+  if (!list.length) {
+    grid.innerHTML = '<div class="lib-empty">🔍 没有找到相关动作<br><span>换个关键词或筛选条件试试</span></div>';
+    return;
+  }
+  grid.innerHTML = list.map(libCard).join('');
+  $$('.lc-img', grid).forEach(img => ensureLibIo().observe(img));
+  $$('.lib-card', grid).forEach(card => card.addEventListener('click', () => openLibDetail(card.dataset.id)));
+}
+
+function openLibDetail(id) {
+  const x = libData.find(e => e.id === id);
+  if (!x) return;
+  const sec = x.s || [];
+  const sub = document.createElement('div');
+  sub.className = 'subpage lib-detail';
+  sub.innerHTML = `
+    <div class="sp-head">
+      <button class="icon-btn back" aria-label="返回">‹</button>
+      <b>${esc(x.n)}</b>
+      <span class="sp-side"></span>
+    </div>
+    <div class="ld-media"><img alt="${esc(x.n)}" src="${MEDIA_BASE}${esc(x.gif)}"></div>
+    <div class="ld-body">
+      <div class="ld-sec">
+        <div class="ld-label">🎯 主要部位</div>
+        <div class="ld-pills">
+          <span class="lc-pill p">${esc(x.t)}</span>
+          ${x.m && x.m !== x.t ? `<span class="lc-pill p">${esc(x.m)}</span>` : ''}
+        </div>
+      </div>
+      ${sec.length ? `<div class="ld-sec">
+        <div class="ld-label">🫶 辅助肌群</div>
+        <div class="ld-pills">${[...new Set(sec)].map(m => `<span class="lc-pill s">${esc(m)}</span>`).join('')}</div>
+      </div>` : ''}
+      <div class="ld-sec">
+        <div class="ld-pills"><span class="lc-pill e">${EQUIP_SVG[x.k] || ''}${esc(x.e)}</span></div>
+      </div>
+      <div class="ld-sec">
+        <div class="ld-label">📝 动作说明</div>
+        <ol class="ld-steps clamped" id="ldSteps">${(x.steps || []).map(s => `<li>${esc(s)}</li>`).join('')}</ol>
+        <button class="ld-more" hidden id="ldMore" type="button">展开全部</button>
+      </div>
+    </div>`;
+  document.body.appendChild(sub);
+  requestAnimationFrame(() => sub.classList.add('show'));
+  $('.back', sub).addEventListener('click', () => closeSub(sub));
+  const stepsEl = $('#ldSteps', sub);
+  const more = $('#ldMore', sub);
+  const check = () => {
+    const over = stepsEl.scrollHeight - stepsEl.clientHeight > 4;
+    more.hidden = !(over || more.dataset.open);
+  };
+  more.addEventListener('click', () => {
+    if (more.dataset.open) {
+      stepsEl.classList.add('clamped');
+      more.textContent = '展开全部';
+      delete more.dataset.open;
+    } else {
+      stepsEl.classList.remove('clamped');
+      more.textContent = '收起';
+      more.dataset.open = '1';
+    }
+    check();
+  });
+  setTimeout(check, 400);
+}
+
+/* 训练页动作缩略图：按名称关键词映射到动作库图片 */
+const EX_THUMB = {
+  深蹲: '0043-qXTaZnJ', 俯卧撑: '0662-I4hDWkc', 平板: '0464-CosupLu',
+  卷腹: '0443-jvp6DiD', 仰卧起坐: '0507-mbkgB44', 波比: '1160-dK9394r',
+  弓步: '0336-RRWFUcw', 箭步: '0336-RRWFUcw', 臀桥: '1409-qKBpF7I',
+  登山: '0630-RJgzwny', 高抬腿: '3636-ealLwvX', 俄罗斯转体: '0687-XVDdcoj',
+  侧平板: '1775-VO2qeJg', 引体: '0652-lBDjFxJ', 跳绳: '2612-e1e76I2',
+  开合跳: '3224-1g5bPpA', 壶铃: '0549-UHJlbu3', 提踵: '1372-8ozhUIZ'
+};
+function thumbFor(name) {
+  for (const k of Object.keys(EX_THUMB)) if (name.includes(k)) return MEDIA_BASE + 'images/' + EX_THUMB[k] + '.jpg';
+  return null;
 }
 
 /* ================= 饮食页 ================= */

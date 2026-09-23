@@ -1,6 +1,6 @@
 /* 轻练 Service Worker：网络优先，离线回退缓存 + 休息结束通知兜底 */
-const CACHE = 'qinglian-v6';
-const ASSETS = ['./', './index.html', './style.css', './app.js', './manifest.webmanifest', './icon.svg'];
+const CACHE = 'qinglian-v7';
+const ASSETS = ['./', './index.html', './style.css', './app.js', './manifest.webmanifest', './icon.svg', './exercises-lib.json'];
 const restTimers = [];
 
 self.addEventListener('install', (e) => {
