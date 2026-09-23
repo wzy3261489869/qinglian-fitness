@@ -419,7 +419,7 @@ function renderHome() {
       <div class="q" data-nav="mine"><i>👤</i>个人中心</div>
     </div>
     <div class="section-title"><h2>热门计划</h2><a data-nav="plan">全部 ›</a></div>
-    ${hot.map(planCard).join('')}
+    ${hot.map(p => planCard(p)).join('')}
     <div class="tips"><span>💡</span><p>${esc(GOAL_TIPS[profile.goal])}。健身贵在坚持，微小的习惯长期复利。</p></div>
   `;
   bindPlanCards();
@@ -429,9 +429,9 @@ function recommendPlan() {
   const pick = (pool.length ? pool : PLANS)[new Date().getDate() % (pool.length || PLANS.length)];
   return planCard(pick);
 }
-function planCard(p) {
+function planCard(p, noCover) {
   return `<div class="plan-card" data-plan="${p.id}">
-    <div class="cover">${(svgMap[p.svg] || svgMap.squat).replace('<svg', '<svg width="84" height="84"')}</div>
+    ${noCover ? '' : `<div class="cover">${(svgMap[p.svg] || svgMap.squat).replace('<svg', '<svg width="84" height="84"')}</div>`}
     <div class="info">
       <b>${esc(p.title)}</b>
       ${goalTag(p.goal)}
@@ -459,7 +459,7 @@ function renderPlan() {
       <span class="le-go">浏览 ›</span>
     </button>
     <div class="chips">${goals.map(g => `<span class="chip ${planFilter === g ? 'active' : ''}" data-g="${g}">${g}</span>`).join('')}</div>
-    <div style="margin-top:12px">${list.map(planCard).join('') || '<div class="empty"><i>🤸</i>该目标下暂无计划</div>'}</div>
+    <div style="margin-top:12px">${list.map(p => planCard(p, true)).join('') || '<div class="empty"><i>🤸</i>该目标下暂无计划</div>'}</div>
   `;
   $$('#app .chip').forEach(c => c.addEventListener('click', () => { planFilter = c.dataset.g; renderPlan(); }));
   bindPlanCards();
