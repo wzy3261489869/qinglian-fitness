@@ -24,20 +24,32 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="loginGate" style="display:none;position:fixed;inset:0;z-index:9999;background:var(--bg,#f5f6f8);flex-direction:column;align-items:center;justify-content:center;padding:24px;box-sizing:border-box">
-    <div style="text-align:center;margin-bottom:28px">
-      <div style="font-size:56px;line-height:1">💪</div>
-      <h1 style="font-size:24px;margin:12px 0 4px">轻练</h1>
-      <p style="color:var(--muted,#888);font-size:14px">合理健身 · 登录后开始使用</p>
-    </div>
-    <div style="width:100%;max-width:320px">
-      <input id="gateUser" placeholder="用户名（3-20位字母数字）" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid var(--border,#ddd);border-radius:12px;font-size:15px;margin-bottom:10px;background:var(--card,#fff);color:var(--text,#333)" />
-      <input id="gatePass" type="password" placeholder="密码（至少6位）" style="width:100%;box-sizing:border-box;padding:12px 14px;border:1px solid var(--border,#ddd);border-radius:12px;font-size:15px;margin-bottom:14px;background:var(--card,#fff);color:var(--text,#333)" />
-      <div style="display:flex;gap:10px">
-        <button id="gateLoginBtn" style="flex:1;padding:13px;border:none;border-radius:12px;font-size:15px;font-weight:600;background:#00b578;color:#fff;cursor:pointer">登录</button>
-        <button id="gateRegBtn" style="flex:1;padding:13px;border:none;border-radius:12px;font-size:15px;font-weight:600;background:var(--card,#fff);color:var(--text,#333);border:1px solid var(--border,#ddd);cursor:pointer">注册</button>
+  <div id="loginGate" class="login-gate">
+    <div class="lg-inner">
+      <div class="lg-brand">
+        <div class="lg-logo">💪</div>
+        <h1>轻练</h1>
+        <p>合理健身 · 登录后开始使用</p>
       </div>
-      <p style="text-align:center;color:var(--muted,#888);font-size:12px;margin-top:16px;line-height:1.5">注册后数据可云同步<br>换设备登录同一账号即可恢复全部记录</p>
+      <form class="lg-form" id="gateForm" autocomplete="on">
+        <div class="lg-field">
+          <label for="gateUser" class="lg-label">用户名</label>
+          <input id="gateUser" name="username" placeholder="3-20位字母/数字/下划线"
+            autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false"
+            enterkeyhint="next" maxlength="20" />
+        </div>
+        <div class="lg-field">
+          <label for="gatePass" class="lg-label">密码</label>
+          <input id="gatePass" name="password" type="password" placeholder="至少 6 位"
+            autocomplete="current-password" enterkeyhint="go" maxlength="40" />
+        </div>
+        <p class="lg-error" id="gateError" role="alert" hidden></p>
+        <div class="lg-btns">
+          <button type="submit" id="gateLoginBtn" class="lg-primary">登录</button>
+          <button type="button" id="gateRegBtn" class="lg-secondary">注册</button>
+        </div>
+        <p class="lg-note">注册后数据可云同步，换设备登录同一账号即可恢复全部记录</p>
+      </form>
     </div>
   </div>
   <div id="app"></div>

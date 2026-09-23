@@ -1,0 +1,23 @@
+# HTML 入口永不缓存，确保用户总是拿到最新版本
+/
+  Cache-Control: no-cache, no-store, must-revalidate
+
+/index.html
+  Cache-Control: no-cache, no-store, must-revalidate
+
+# 核心脚本与样式：协商缓存，配合 SW 网络优先
+/app.js
+  Cache-Control: no-cache
+
+/style.css
+  Cache-Control: no-cache
+
+/sw.js
+  Cache-Control: no-cache
+
+# 图标与清单可长缓存
+/icon.svg
+  Cache-Control: public, max-age=604800
+
+/manifest.webmanifest
+  Cache-Control: public, max-age=86400

@@ -184,12 +184,23 @@ if (!auth || !auth.apiBase) {
   auth = { token: (auth && auth.token) || '', username: (auth && auth.username) || '', apiBase: base };
   if (auth.token) store.set('auth', auth);
 }
-async function api(method, path, body) {
-  const res = await fetch(auth.apiBase + path, {
-    method,
-    headers: Object.assign({ 'Content-Type': 'application/json' }, auth.token ? { Authorization: 'Bearer ' + auth.token } : {}),
-    body: body ? JSON.stringify(body) : undefined
-  });
+async function api(method, path, body, timeoutMs) {
+  const ctrl = new AbortController();
+  const to = setTimeout(() => ctrl.abort(), timeoutMs || 15000);
+  let res;
+  try {
+    res = await fetch(auth.apiBase + path, {
+      method,
+      signal: ctrl.signal,
+      headers: Object.assign({ 'Content-Type': 'application/json' }, auth.token ? { Authorization: 'Bearer ' + auth.token } : {}),
+      body: body ? JSON.stringify(body) : undefined
+    });
+  } catch (e) {
+    if (e.name === 'AbortError') return { ok: false, msg: '请求超时，请检查网络后重试', net: true };
+    return { ok: false, msg: '无法连接服务器，请检查网络', net: true };
+  } finally {
+    clearTimeout(to);
+  }
   if (res.status === 401 && auth.token) {
     auth = { token: '', username: '', apiBase: auth.apiBase };
     store.set('auth', auth);
@@ -198,7 +209,8 @@ async function api(method, path, body) {
     if (typeof renderMine === 'function') renderMine();
     return { ok: false, msg: '未登录' };
   }
-  return res.json();
+  try { return await res.json(); }
+  catch (e) { return { ok: false, msg: '服务器响应异常，请稍后重试', net: true }; }
 }
 function syncCollect() {
   return { profile, records, dietEntries, waterMap, theme, v: 1 };
@@ -1001,7 +1013,7 @@ function renderMine() {
     </div>
     <div class="card">
       <h3>关于轻练</h3>
-      <p class="muted">轻练 · 合理健身网站版 v1.2.0</p>
+      <p class="muted">轻练 · 合理健身网站版 v1.3.0</p>
       <p class="muted" style="margin-top:4px">数据默认保存在本机浏览器；登录账号后可云同步到服务器，随时换设备恢复。</p>
     </div>
   `;
@@ -1052,51 +1064,84 @@ function resumeSessionIfAny() {
 }
 
 // 登录门控：未登录时显示登录界面，登录后才进入应用
+let gateMode = 'login';
+function setGateMode(mode) {
+  gateMode = mode;
+  const gate = $('#loginGate');
+  gate.classList.toggle('is-reg', mode === 'reg');
+  $('#gateLoginBtn').textContent = mode === 'reg' ? '注册' : '登录';
+  $('#gateRegBtn').textContent = mode === 'reg' ? '已有账号，去登录' : '没有账号，去注册';
+  const pass = $('#gatePass');
+  pass.setAttribute('autocomplete', mode === 'reg' ? 'new-password' : 'current-password');
+  pass.setAttribute('enterkeyhint', mode === 'reg' ? 'send' : 'go');
+  hideGateError();
+}
+function showGateError(msg) {
+  const el = $('#gateError');
+  el.textContent = msg;
+  el.hidden = false;
+}
+function hideGateError() {
+  const el = $('#gateError');
+  if (el) { el.textContent = ''; el.hidden = true; }
+}
 function showLoginGate() {
   const gate = $('#loginGate');
   if (!gate) return;
-  gate.style.display = 'flex';
+  gate.classList.add('on');
   $('#app').style.visibility = 'hidden';
   $('#tabbar').style.display = 'none';
+  setGateMode('login');
   // 绑定事件（只绑一次）
   if (!gate._bound) {
     gate._bound = true;
-    $('#gateLoginBtn').addEventListener('click', () => gateAuth('login'));
-    $('#gateRegBtn').addEventListener('click', () => gateAuth('reg'));
-    $('#gatePass').addEventListener('keydown', e => { if (e.key === 'Enter') gateAuth('login'); });
+    $('#gateForm').addEventListener('submit', e => { e.preventDefault(); gateAuth(gateMode); });
+    $('#gateRegBtn').addEventListener('click', () => {
+      if (gateMode === 'login') { setGateMode('reg'); $('#gateUser').focus(); }
+      else setGateMode('login');
+    });
+    // 输入时清除错误提示
+    $('#gateUser').addEventListener('input', hideGateError);
+    $('#gatePass').addEventListener('input', hideGateError);
   }
+  setTimeout(() => {
+    if (!$('#gateUser').value) $('#gateUser').focus();
+  }, 350);
 }
 function hideLoginGate() {
   const gate = $('#loginGate');
   if (!gate) return;
-  gate.style.display = 'none';
+  gate.classList.remove('on');
   $('#app').style.visibility = '';
   $('#tabbar').style.display = '';
 }
 async function gateAuth(mode) {
   const u = ($('#gateUser').value || '').trim(), p = $('#gatePass').value || '';
-  if (!u || !p) { toast('请输入用户名和密码'); return; }
-  if (!/^[a-zA-Z0-9_]{3,20}$/.test(u)) { toast('用户名需3-20位字母/数字/下划线'); return; }
-  if (p.length < 6) { toast('密码至少6位'); return; }
-  const loginBtn = $('#gateLoginBtn'), regBtn = $('#gateRegBtn');
-  loginBtn.disabled = regBtn.disabled = true;
-  loginBtn.textContent = '请稍候…';
-  try {
-    const r = await api('POST', mode === 'reg' ? '/api/register' : '/api/login', { username: u, password: p });
-    if (r.ok) {
-      auth = { token: r.token, username: r.username, apiBase: auth.apiBase };
-      store.set('auth', auth);
-      toast(mode === 'reg' ? '注册成功 🎉' : '欢迎回来，' + r.username);
-      hideLoginGate();
-      // 登录后若本地无数据且云端有，自动恢复
-      if (records.length === 0 && dietEntries.length === 0) cloudDownload();
-      showTab('home');
-      resumeSessionIfAny();
-    } else {
-      toast(r.msg || '操作失败');
-    }
-  } catch (e) { toast('网络连接失败，请检查网络'); }
-  finally { loginBtn.disabled = regBtn.disabled = false; loginBtn.textContent = '登录'; }
+  if (!u || !p) { showGateError('请输入用户名和密码'); return; }
+  if (!/^[a-zA-Z0-9_]{3,20}$/.test(u)) { showGateError('用户名需 3-20 位字母/数字/下划线'); $('#gateUser').focus(); return; }
+  if (p.length < 6) { showGateError('密码至少 6 位'); $('#gatePass').focus(); return; }
+  const primary = $('#gateLoginBtn'), secondary = $('#gateRegBtn');
+  primary.disabled = secondary.disabled = true;
+  primary.classList.add('loading');
+  hideGateError();
+  const r = await api('POST', mode === 'reg' ? '/api/register' : '/api/login', { username: u, password: p }, 20000);
+  primary.classList.remove('loading');
+  primary.disabled = secondary.disabled = false;
+  if (r.ok) {
+    auth = { token: r.token, username: r.username, apiBase: auth.apiBase };
+    store.set('auth', auth);
+    toast(mode === 'reg' ? '注册成功 🎉' : '欢迎回来，' + r.username);
+    hideLoginGate();
+    // 登录后若本地无数据且云端有，自动恢复
+    if (records.length === 0 && dietEntries.length === 0) cloudDownload();
+    showTab('home');
+    resumeSessionIfAny();
+  } else {
+    showGateError(r.msg || '操作失败，请稍后重试');
+    // 密码类错误：聚焦密码框并选中，方便直接重输
+    $('#gatePass').focus();
+    $('#gatePass').select();
+  }
 }
 // 退出登录时重新显示门控
 const _origLogout = doLogout;

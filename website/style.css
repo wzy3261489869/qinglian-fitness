@@ -491,3 +491,138 @@ body, .card, #tabbar, .subpage .sp-head { transition: background-color .25s, bor
 :root[data-theme="dark"] .ex-idx { background: #262a32; }
 :root[data-theme="dark"] .ex-row:active { background: #262a32; }
 :root[data-theme="dark"] .btn.icon-round { background: #262a32; }
+
+/* ============================================
+   登录门控 v2：移动优先 · 防缩放 · 键盘友好
+   ============================================ */
+.login-gate {
+  position: fixed; inset: 0; z-index: 9999;
+  display: none;
+  background:
+    radial-gradient(120% 60% at 50% -10%, rgba(54, 201, 154, .16), transparent 60%),
+    var(--bg-page);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.login-gate.on { display: flex; }
+.lg-inner {
+  width: 100%; max-width: 400px; margin: auto;
+  padding: calc(32px + env(safe-area-inset-top)) 24px calc(28px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; justify-content: center;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+.lg-brand { text-align: center; margin-bottom: 26px; }
+.lg-logo {
+  width: 76px; height: 76px; margin: 0 auto 12px;
+  border-radius: 22px; font-size: 40px; line-height: 76px;
+  background: var(--grad);
+  box-shadow: 0 10px 28px rgba(0, 181, 120, .32);
+}
+.lg-brand h1 { font-size: 28px; font-weight: 800; letter-spacing: 1px; }
+.lg-brand p { font-size: 14px; color: var(--text-3); margin-top: 6px; }
+
+.lg-field { margin-bottom: 14px; }
+.lg-label {
+  display: block; font-size: 13px; font-weight: 600;
+  color: var(--text-2); margin: 0 2px 6px;
+}
+.lg-form input {
+  width: 100%; box-sizing: border-box;
+  height: 50px; padding: 0 16px;
+  font-size: 16px; /* ≥16px 防止 iOS 聚焦自动缩放 */
+  color: var(--text-1);
+  background: var(--bg-card);
+  border: 1.5px solid var(--border);
+  border-radius: 14px; outline: none;
+  transition: border-color .18s, box-shadow .18s;
+}
+.lg-form input::placeholder { color: var(--text-3); }
+.lg-form input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(0, 181, 120, .14);
+}
+.lg-error {
+  margin: 2px 2px 12px; padding: 10px 14px;
+  font-size: 13px; line-height: 1.45;
+  color: #d92020; background: rgba(245, 63, 63, .1);
+  border-radius: 12px;
+}
+:root[data-theme="dark"] .lg-error { color: #ff8080; background: rgba(245, 63, 63, .14); }
+
+.lg-btns { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.lg-primary {
+  width: 100%; height: 52px;
+  border: none; border-radius: 14px;
+  background: var(--grad); color: #fff;
+  font-size: 17px; font-weight: 700; letter-spacing: 1px;
+  box-shadow: 0 8px 22px rgba(0, 181, 120, .3);
+  transition: transform .12s, opacity .12s;
+}
+.lg-primary:active { transform: scale(.985); }
+.lg-primary:disabled { opacity: .7; }
+.lg-secondary {
+  width: 100%; height: 44px;
+  border: none; border-radius: 14px;
+  background: transparent; color: var(--primary);
+  font-size: 14px; font-weight: 600;
+}
+.lg-secondary:active { opacity: .6; }
+.lg-note {
+  margin-top: 18px; text-align: center;
+  font-size: 12px; line-height: 1.6; color: var(--text-3);
+}
+
+/* 主按钮 loading：旋转指示器 */
+.lg-primary.loading { color: transparent; position: relative; }
+.lg-primary.loading::after {
+  content: ''; position: absolute; top: 50%; left: 50%;
+  width: 22px; height: 22px; margin: -11px 0 0 -11px;
+  border: 2.5px solid rgba(255, 255, 255, .35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: lgspin .7s linear infinite;
+}
+@keyframes lgspin { to { transform: rotate(360deg); } }
+
+/* 横屏矮窗口：压缩品牌区，表单优先 */
+@media (orientation: landscape) and (max-height: 500px) {
+  .lg-inner { padding: 16px 24px; }
+  .lg-brand { margin-bottom: 14px; }
+  .lg-logo { width: 52px; height: 52px; line-height: 52px; font-size: 28px; border-radius: 16px; }
+  .lg-brand h1 { display: inline; font-size: 22px; margin-left: 10px; }
+  .lg-brand p { display: none; }
+  .lg-note { margin-top: 10px; }
+}
+
+/* ============================================
+   全局移动端体验：动态视口高度 · 触摸优化
+   ============================================ */
+@supports (height: 100dvh) {
+  #app { min-height: 100dvh; }
+}
+body {
+  /* 防止橡皮筋滚动穿透到子页 */
+  overscroll-behavior-y: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+/* 可点元素的触摸反馈兜底（无 JS 延迟） */
+.chip, .quick .q, .water-cups span, .plan-card, .seg-i { touch-action: manipulation; }
+
+/* 尊重用户的“减少动态效果”偏好 */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/* 深色模式登录页装饰光 */
+:root[data-theme="dark"] .login-gate {
+  background:
+    radial-gradient(120% 60% at 50% -10%, rgba(54, 201, 154, .18), transparent 60%),
+    var(--bg-page);
+}
