@@ -8,7 +8,7 @@
   --bg-card: #fff;
   --text-1: #1d2129;
   --text-2: #4e5969;
-  --text-3: #86909c;
+  --text-3: #6b7280;
   --divider: #f0f3f1;
   --border: #e8edea;
   --grad: linear-gradient(135deg, #00b578 0%, #36c99a 100%);
@@ -83,7 +83,7 @@ img { display: block; }
 .chips { display: flex; gap: 8px; overflow-x: auto; padding: 12px 0 2px; scrollbar-width: none; }
 .chips::-webkit-scrollbar { display: none; }
 .tag { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
-.tag-fat { background: #fff1e8; color: #ff7d00; }
+.tag-fat { background: #fff1e8; color: #b25c00; }
 .tag-muscle { background: #e8f3ff; color: #165dff; }
 .tag-shape { background: #e9fbf4; color: #00905f; }
 .tag-begin { background: #f5f0ff; color: #7a3df0; }
@@ -306,7 +306,7 @@ img { display: block; }
   --bg-card: #1a1d24;
   --text-1: #e8eaed;
   --text-2: #a8b0bd;
-  --text-3: #6b7280;
+  --text-3: #8b93a1;
   --divider: #262a32;
   --border: #2a2f38;
   --grad: linear-gradient(135deg, #00b578 0%, #36c99a 100%);
@@ -337,3 +337,157 @@ img { display: block; }
 /* 深色模式平滑切换 */
 :root { transition: background-color .25s, color .25s; }
 body, .card, #tabbar, .subpage .sp-head { transition: background-color .25s, border-color .25s, box-shadow .25s; }
+
+/* ============================================
+   训练页 v2：大字计时 · 超大完成按钮 · 动作大行
+   ============================================ */
+/* 头部图标按钮：触摸区 ≥44px */
+.icon-btn {
+  min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center;
+  font-size: 24px; color: var(--text-2); background: none; border-radius: 10px; padding: 4px 8px;
+}
+.icon-btn:active { background: var(--divider); }
+.wk-quit { font-size: 14px; font-weight: 500; }
+.sp-head b { flex: 1; text-align: center; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.workout-page .wk-body { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+
+/* 计时卡：竖屏超大字 */
+.workout-page .timer-card { text-align: center; padding: 20px 16px 18px; }
+.tc-label { font-size: 13px; color: var(--text-3); letter-spacing: .5px; }
+.workout-page .tc-num {
+  font-size: 64px; font-weight: 800; line-height: 1.12; margin: 6px 0 2px;
+  font-variant-numeric: tabular-nums; letter-spacing: 1px;
+}
+.workout-page .tc-btns { display: flex; gap: 12px; justify-content: center; margin-top: 14px; }
+.workout-page .tc-btns .btn.big { min-width: 150px; height: 52px; font-size: 17px; border-radius: 16px; }
+.btn.icon-round { width: 52px; min-width: 52px; height: 52px; padding: 0; border-radius: 16px; font-size: 22px; }
+.wk-hint { margin-top: 12px; font-size: 12px; }
+
+/* 休息卡 */
+.rest-card { text-align: center; padding: 18px 16px; }
+.rest-num {
+  font-size: 52px; font-weight: 800; line-height: 1.1; color: var(--accent);
+  font-variant-numeric: tabular-nums; margin: 4px 0 12px;
+}
+.rest-card .btn.full { height: 46px; font-size: 15px; }
+
+/* 动作大行：整块可点、高 ≥56px、行距大 */
+.ex-row {
+  width: 100%; display: flex; align-items: center; gap: 12px;
+  min-height: 56px; padding: 10px 4px; text-align: left;
+  background: none; color: inherit; font: inherit;
+  border-bottom: 1px solid var(--divider); border-radius: 0;
+}
+.ex-row:last-child { border-bottom: none; }
+.ex-row:active { background: var(--divider); }
+.ex-idx {
+  width: 30px; height: 30px; border-radius: 999px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: var(--bg-page); color: var(--text-2); font-size: 14px; font-weight: 700;
+}
+.ex-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.exn { font-size: 16px; font-weight: 600; color: var(--text-1); }
+.exm { font-size: 12px; color: var(--text-3); }
+.ex-state {
+  width: 30px; height: 30px; border-radius: 999px; flex-shrink: 0; position: relative;
+  border: 2px solid var(--border); background: transparent; transition: .15s;
+}
+.ex-row.done .ex-idx { background: var(--grad); color: #fff; }
+.ex-row.done .exn { color: var(--text-3); text-decoration: line-through; }
+.ex-row.done .ex-state { border-color: transparent; background: var(--grad); }
+.ex-row.done .ex-state::after {
+  content: '✓'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 15px; font-weight: 700;
+}
+
+/* 底部固定超大主按钮 */
+.wk-foot {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 6;
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  background: linear-gradient(to top, var(--bg-card) 62%, rgba(255, 255, 255, 0));
+}
+:root[data-theme="dark"] .wk-foot { background: linear-gradient(to top, var(--bg-page) 62%, rgba(15, 17, 21, 0)); }
+.btn.mega {
+  width: 100%; height: 64px; border-radius: 18px;
+  font-size: 19px; font-weight: 700; letter-spacing: .5px;
+  box-shadow: 0 6px 20px rgba(0, 181, 120, .32);
+}
+.btn.mega:active { transform: scale(.985); }
+.btn.mega.finish {
+  background: var(--grad-accent);
+  box-shadow: 0 6px 20px rgba(255, 125, 0, .32);
+}
+
+/* 训练偏好：设置行 + 分段控件 */
+.set-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px 0; border-bottom: 1px solid var(--divider); font-size: 15px;
+}
+.set-row:last-of-type { border-bottom: none; }
+.seg { display: inline-flex; background: var(--bg-page); border-radius: 10px; padding: 3px; gap: 2px; }
+.seg-i {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-height: 34px; padding: 0 14px; border-radius: 8px;
+  font-size: 13px; color: var(--text-2); cursor: pointer; white-space: nowrap;
+}
+.seg-i.on { background: var(--bg-card); color: var(--primary); font-weight: 700; box-shadow: var(--shadow); }
+.seg-i:active { opacity: .75; }
+
+/* 键盘可达：清晰焦点 */
+:focus:not(:focus-visible) { outline: none; }
+:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; border-radius: 10px; }
+
+/* 横屏：计时在左、清单在右，矮高度也能用 */
+@media (orientation: landscape) and (max-height: 520px) {
+  .workout-page .wk-body {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+  .workout-page .wk-main, .workout-page .wk-list { flex: 1; min-width: 0; }
+  .workout-page .wk-list .card { margin-top: 12px; }
+  .workout-page .timer-card { padding: 12px 14px; }
+  .workout-page .tc-num { font-size: 42px; }
+  .rest-num { font-size: 36px; }
+  .btn.mega { height: 52px; font-size: 17px; }
+  .icon-btn { min-height: 38px; }
+}
+
+/* ============================================
+   字号档位（标准 / 大 / 超大）
+   ============================================ */
+:root[data-fs="large"] body { font-size: 17px; }
+:root[data-fs="xlarge"] body { font-size: 19px; }
+
+:root[data-fs="large"] .page-head h1 { font-size: 27px; }
+:root[data-fs="xlarge"] .page-head h1 { font-size: 30px; }
+:root[data-fs="large"] .section-title h2 { font-size: 19px; }
+:root[data-fs="xlarge"] .section-title h2 { font-size: 21px; }
+:root[data-fs="large"] .card h3 { font-size: 17px; }
+:root[data-fs="xlarge"] .card h3 { font-size: 19px; }
+:root[data-fs="large"] .muted, :root[data-fs="large"] .muted.muted { font-size: 13px; }
+:root[data-fs="xlarge"] .muted { font-size: 14px; }
+:root[data-fs="large"] .chip { font-size: 14px; height: 34px; }
+:root[data-fs="xlarge"] .chip { font-size: 15px; height: 36px; }
+
+:root[data-fs="large"] .exn { font-size: 17px; }
+:root[data-fs="xlarge"] .exn { font-size: 19px; }
+:root[data-fs="large"] .exm { font-size: 13px; }
+:root[data-fs="xlarge"] .exm { font-size: 14px; }
+:root[data-fs="large"] .ex-row { min-height: 60px; }
+:root[data-fs="xlarge"] .ex-row { min-height: 64px; }
+:root[data-fs="large"] .workout-page .tc-num { font-size: 70px; }
+:root[data-fs="xlarge"] .workout-page .tc-num { font-size: 76px; }
+:root[data-fs="large"] .rest-num { font-size: 58px; }
+:root[data-fs="xlarge"] .rest-num { font-size: 64px; }
+:root[data-fs="large"] .btn.mega { font-size: 20px; }
+:root[data-fs="xlarge"] .btn.mega { font-size: 22px; }
+:root[data-fs="large"] .set-row, :root[data-fs="large"] .seg-i { font-size: 14px; }
+:root[data-fs="xlarge"] .set-row, :root[data-fs="xlarge"] .seg-i { font-size: 15px; }
+
+/* 深色模式：分段控件与主按钮适配 */
+:root[data-theme="dark"] .seg { background: #14171c; }
+:root[data-theme="dark"] .seg-i.on { background: var(--bg-card); }
+:root[data-theme="dark"] .ex-idx { background: #262a32; }
+:root[data-theme="dark"] .ex-row:active { background: #262a32; }
+:root[data-theme="dark"] .btn.icon-round { background: #262a32; }

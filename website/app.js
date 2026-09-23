@@ -169,6 +169,12 @@ const saveRecords = () => store.set('records', records);
 const saveDiet = () => store.set('dietEntries', dietEntries);
 const saveWater = () => store.set('waterMap', waterMap);
 
+/* ================= 训练设置（声音/震动/休息时长/字号） ================= */
+const DEFAULT_SETTINGS = { sound: true, vibrate: true, restSec: 30, fs: 'normal' };
+let settings = Object.assign({}, DEFAULT_SETTINGS, store.get('settings', {}));
+const saveSettings = () => { store.set('settings', settings); applyFontScale(); };
+function applyFontScale() { document.documentElement.dataset.fs = settings.fs || 'normal'; }
+
 /* ================= 云同步 ================= */
 // API 地址：同源优先（后端托管网页时），否则默认本地后端
 let auth = store.get('auth', null); // {token, username, apiBase}
@@ -440,80 +446,278 @@ function renderPlan() {
   bindPlanCards();
 }
 
-/* ================= 训练页（子页） ================= */
-const timer = { sec: 0, running: false, iv: null };
-function fmtSec(s) { return `${pad(Math.floor(s / 60))}:${pad(s % 60)}`; }
-function openWorkout(planId) {
+/* ================= 训练页（子页） =================
+   设计要点：
+   1) 时间戳计时——真值来自 Date.now()，锁屏/切后台/刷新都不丢秒；
+   2) 会话持久化到 localStorage——刷新自动恢复当前组；
+   3) Wake Lock 屏幕常亮 + SW 通知兜底休息结束；
+   4) Web Audio 合成提示音（零音频文件、可离线）+ 震动反馈；
+   5) 底部固定超大「完成」按钮，汗手一键点按。
+   session: { date, planId, done:[i], running, runStart, elapsed, restEnd, restLen, beeped } */
+let workout = null;
+let workoutSub = null;
+let workoutIv = null;
+
+function fmtSec(s) { s = Math.max(0, s | 0); return `${pad(Math.floor(s / 60))}:${pad(s % 60)}`; }
+function persistSession() { if (workout) store.set('session', workout); }
+function clearSession() { store.set('session', null); }
+function currentElapsed() {
+  if (!workout) return 0;
+  return workout.elapsed + (workout.running ? Date.now() - workout.runStart : 0);
+}
+
+/* ---- 提示音（Web Audio 合成） ---- */
+let audioCtx = null;
+function unlockAudio() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  } catch (e) {}
+}
+function beep(freq = 880, dur = 0.18, type = 'sine', vol = 0.32) {
+  if (!settings.sound) return;
+  try {
+    unlockAudio();
+    const t0 = audioCtx.currentTime;
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t0);
+    g.gain.setValueAtTime(vol, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(t0); o.stop(t0 + dur);
+  } catch (e) {}
+}
+function haptic(p) {
+  if (settings.vibrate && 'vibrate' in navigator) { try { navigator.vibrate(p); } catch (e) {} }
+}
+
+/* ---- 屏幕常亮（Wake Lock API） ---- */
+let wakeLock = null;
+async function acquireWake() {
+  try {
+    if ('wakeLock' in navigator && !wakeLock) {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => { wakeLock = null; });
+    }
+  } catch (e) {}
+}
+function releaseWake() { try { if (wakeLock) wakeLock.release(); } catch (e) {} wakeLock = null; }
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && workout && workout.running) acquireWake();
+});
+
+/* ---- 通知权限 + SW 兜底：锁屏也能提醒休息结束 ---- */
+function askNotify() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission().catch(() => {});
+  }
+}
+function scheduleRestNotification(restLen) {
+  try {
+    if ('Notification' in window && Notification.permission === 'granted' && navigator.serviceWorker.controller) {
+      navigator.serviceWorker.controller.postMessage({ type: 'rest-end', at: Date.now() + restLen * 1000 });
+    }
+  } catch (e) {}
+}
+
+function openWorkout(planId, saved) {
   const p = PLANS.find(x => x.id === planId);
   if (!p) return;
-  const done = new Set();
+  workout = saved || {
+    date: todayStr(), planId, done: [], running: false,
+    runStart: 0, elapsed: 0, restEnd: 0, restLen: settings.restSec, beeped: {}
+  };
+  workout.planId = planId;
   const sub = document.createElement('div');
-  sub.className = 'subpage';
+  sub.className = 'subpage workout-page';
   sub.innerHTML = `
-    <div class="sp-head"><span class="back">‹</span><b>${esc(p.title)}</b></div>
-    <div class="sp-body">
-      <div class="card timer-card">
-        <div class="tc-num" id="tcNum">00:00<small> 分:秒</small></div>
-        <div class="muted">完成动作越多，消耗越多 · 组间休息 30-60 秒</div>
-        <div class="tc-btns">
-          <button class="btn" id="tcToggle">开始</button>
-          <button class="btn ghost" id="tcReset">重置</button>
+    <div class="sp-head">
+      <button class="icon-btn back" id="wkBack" aria-label="返回（保留进度）">‹</button>
+      <b>${esc(p.title)}</b>
+      <button class="icon-btn wk-quit" id="wkQuit" aria-label="放弃训练">放弃</button>
+    </div>
+    <div class="sp-body wk-body">
+      <div class="wk-main">
+        <div class="card timer-card">
+          <div class="tc-label">训练计时</div>
+          <div class="tc-num" id="tcNum">00:00</div>
+          <div class="tc-btns">
+            <button class="btn big" id="tcToggle">▶ 开始</button>
+            <button class="btn ghost icon-round" id="tcReset" aria-label="重置计时">↻</button>
+          </div>
+          <div class="wk-hint muted">训练中屏幕保持常亮 · 锁屏计时不中断</div>
+        </div>
+        <div class="card rest-card" id="restCard" hidden>
+          <div class="tc-label">😮‍💨 组间休息</div>
+          <div class="rest-num" id="restNum">00</div>
+          <button class="btn ghost full" id="restSkip">跳过休息，继续练</button>
         </div>
       </div>
-      <div class="card">
-        <h3>动作清单 <span class="muted" id="exCount">0/${p.exercises.length}</span></h3>
-        <div class="progress-mini"><i id="exBar" style="width:0%"></i></div>
-        <div style="margin-top:8px">
-          ${p.exercises.map((n, i) => {
-            const ex = EXERCISES.find(e => e.name === n) || { minutes: 4, kcal: 30 };
-            return `<div class="ex-check" data-i="${i}">
-              <span class="cb"></span>
-              <span class="exn">${esc(n)}</span>
-              <span class="exm">${ex.minutes} 分钟 · ${ex.kcal} 千卡</span>
-            </div>`;
-          }).join('')}
+      <div class="wk-list">
+        <div class="card">
+          <h3>动作清单 <span class="muted" id="exCount">0/${p.exercises.length}</span></h3>
+          <div class="progress-mini"><i id="exBar" style="width:0%"></i></div>
+          <div class="ex-list" style="margin-top:10px">
+            ${p.exercises.map((n, i) => {
+              const ex = EXERCISES.find(e => e.name === n) || { minutes: 4, kcal: 30 };
+              return `<button type="button" class="ex-row ${workout.done.includes(i) ? 'done' : ''}" data-i="${i}">
+                <span class="ex-idx">${i + 1}</span>
+                <span class="ex-info"><span class="exn">${esc(n)}</span><span class="exm">${ex.minutes}分钟 · ${ex.kcal}千卡</span></span>
+                <span class="ex-state"></span>
+              </button>`;
+            }).join('')}
+          </div>
         </div>
       </div>
-      <button class="btn full" id="tcSave" style="margin-top:14px">保存训练记录</button>
-      <p class="muted" style="text-align:center;margin-top:10px">预计消耗 ${p.kcal} 千卡 · 时长 ${p.duration} 分钟</p>
+    </div>
+    <div class="wk-foot">
+      <button class="btn mega" id="wkMega">✓ 完成第 1 个动作</button>
     </div>`;
   document.body.appendChild(sub);
-  sub.classList.add('show');
+  requestAnimationFrame(() => sub.classList.add('show'));
+  workoutSub = sub;
 
-  const tick = () => { timer.sec++; $('#tcNum', sub).innerHTML = fmtSec(timer.sec) + '<small> 分:秒</small>'; };
-  $('#tcToggle', sub).addEventListener('click', e => {
-    timer.running = !timer.running;
-    e.target.textContent = timer.running ? '暂停' : '继续';
-    if (timer.running) timer.iv = setInterval(tick, 1000);
-    else clearInterval(timer.iv);
+  /* 开始 / 暂停 */
+  $('#tcToggle', sub).addEventListener('click', () => {
+    unlockAudio(); askNotify();
+    if (workout.running) {
+      workout.elapsed += Date.now() - workout.runStart;
+      workout.running = false;
+      $('#tcToggle', sub).innerHTML = '▶ 继续';
+      releaseWake();
+    } else {
+      workout.running = true;
+      workout.runStart = Date.now();
+      $('#tcToggle', sub).innerHTML = '⏸ 暂停';
+      acquireWake();
+    }
+    persistSession(); renderTick();
   });
   $('#tcReset', sub).addEventListener('click', () => {
-    clearInterval(timer.iv); timer.running = false; timer.sec = 0;
-    $('#tcToggle', sub).textContent = '开始';
-    $('#tcNum', sub).innerHTML = '00:00<small> 分:秒</small>';
+    workout.elapsed = 0;
+    if (workout.running) workout.runStart = Date.now();
+    persistSession(); renderTick();
   });
-  $$('.ex-check', sub).forEach(el => el.addEventListener('click', () => {
-    const i = +el.dataset.i;
-    if (done.has(i)) done.delete(i); else { done.add(i); toast('完成！组间休息 30-60 秒 💧'); }
-    el.classList.toggle('done', done.has(i));
-    el.querySelector('.cb').textContent = done.has(i) ? '✓' : '';
-    const ratio = done.size / p.exercises.length;
-    $('#exCount', sub).textContent = `${done.size}/${p.exercises.length}`;
-    $('#exBar', sub).style.width = ratio * 100 + '%';
-  }));
-  $('#tcSave', sub).addEventListener('click', () => {
-    if (done.size === 0 && timer.sec === 0) { toast('先完成至少一个动作吧'); return; }
-    const ratio = Math.max(done.size / p.exercises.length, timer.sec / 60 / p.duration);
-    const minutes = Math.max(1, Math.round(Math.max(timer.sec / 60, p.duration * (done.size / p.exercises.length))));
-    const kcal = Math.max(5, Math.round(p.kcal * ratio));
-    records.unshift({ id: genId(), planTitle: p.title, date: todayStr(), minutes, kcal, doneCount: done.size, total: p.exercises.length });
-    saveRecords();
-    clearInterval(timer.iv);
-    closeSubpages();
-    toast(`已记录：${minutes} 分钟 · ${kcal} 千卡 🔥`);
-    showTab('stats');
+  $('#restSkip', sub).addEventListener('click', () => { workout.restEnd = 0; persistSession(); renderTick(); });
+  $$('.ex-row', sub).forEach(el => el.addEventListener('click', () => toggleDone(+el.dataset.i)));
+  /* 底部超大主按钮：一键完成当前动作；全部完成后变保存 */
+  $('#wkMega', sub).addEventListener('click', () => {
+    unlockAudio(); askNotify();
+    const next = nextUndone();
+    if (next === null) { saveWorkout(); return; }
+    if (!workout.running) {
+      workout.running = true; workout.runStart = Date.now();
+      $('#tcToggle', sub).innerHTML = '⏸ 暂停';
+      acquireWake();
+    }
+    completeOne(next);
   });
-  $('.back', sub).addEventListener('click', () => { clearInterval(timer.iv); sub.remove(); });
+  $('#wkBack', sub).addEventListener('click', () => { persistSession(); exitWorkout(); toast('进度已保留，刷新可恢复'); });
+  $('#wkQuit', sub).addEventListener('click', () => {
+    if (confirm('确定放弃本次训练？当前进度将被清除')) {
+      exitWorkout(); clearSession(); toast('训练已放弃');
+    }
+  });
+
+  clearInterval(workoutIv);
+  workoutIv = setInterval(renderTick, 250);
+  renderTick(); updateProgress(); updateMega();
+  persistSession();
+  if (saved && (saved.elapsed > 0 || saved.done.length)) toast('已恢复上次训练 💪');
+}
+
+/* 主循环：更新计时显示 + 休息倒计时（真值全部来自时间戳） */
+function renderTick() {
+  if (!workout || !workoutSub) return;
+  const sub = workoutSub;
+  $('#tcNum', sub).textContent = fmtSec(currentElapsed() / 1000);
+  const restCard = $('#restCard', sub);
+  if (workout.restEnd) {
+    const left = Math.ceil((workout.restEnd - Date.now()) / 1000);
+    if (left > 0) {
+      restCard.hidden = false;
+      $('#restNum', sub).textContent = pad(left);
+      if (left <= 3 && !workout.beeped[left]) {
+        workout.beeped[left] = true;
+        beep(880, .12);
+        haptic(150);
+      }
+    } else {
+      restCard.hidden = true;
+      workout.restEnd = 0;
+      beep(1175, .55, 'sine', .4);              /* 结束长“滴” */
+      haptic([300, 100, 300]);
+    }
+  } else {
+    restCard.hidden = true;
+  }
+  persistSession();
+}
+
+function completeOne(i) {
+  if (!workout.done.includes(i)) workout.done.push(i);
+  const row = $(`.ex-row[data-i="${i}"]`, workoutSub);
+  if (row) row.classList.add('done');
+  beep(660, .12); haptic(60);
+  /* 自动开始组间休息倒计时 */
+  workout.restLen = settings.restSec;
+  workout.restEnd = Date.now() + settings.restSec * 1000;
+  workout.beeped = {};
+  scheduleRestNotification(settings.restSec);
+  updateProgress(); updateMega(); persistSession();
+}
+function toggleDone(i) {
+  const row = $(`.ex-row[data-i="${i}"]`, workoutSub);
+  if (workout.done.includes(i)) {
+    workout.done = workout.done.filter(x => x !== i);
+    if (row) row.classList.remove('done');
+  } else {
+    completeOne(i);
+  }
+  updateProgress(); updateMega(); persistSession();
+}
+function nextUndone() {
+  const n = PLANS.find(x => x.id === workout.planId).exercises.length;
+  for (let i = 0; i < n; i++) if (!workout.done.includes(i)) return i;
+  return null;
+}
+function updateProgress() {
+  if (!workoutSub) return;
+  const p = PLANS.find(x => x.id === workout.planId);
+  const ratio = workout.done.length / p.exercises.length;
+  $('#exCount', workoutSub).textContent = `${workout.done.length}/${p.exercises.length}`;
+  $('#exBar', workoutSub).style.width = ratio * 100 + '%';
+}
+function updateMega() {
+  const btn = $('#wkMega', workoutSub);
+  if (!btn) return;
+  const next = nextUndone();
+  if (next === null) { btn.textContent = '💾 保存训练记录'; btn.classList.add('finish'); }
+  else { btn.textContent = `✓ 完成第 ${next + 1} 个动作`; btn.classList.remove('finish'); }
+}
+function saveWorkout() {
+  const p = PLANS.find(x => x.id === workout.planId);
+  const elapsedSec = Math.floor(currentElapsed() / 1000);
+  if (workout.done.length === 0 && elapsedSec === 0) { toast('先完成至少一个动作吧'); return; }
+  const ratio = Math.max(workout.done.length / p.exercises.length, elapsedSec / 60 / p.duration);
+  const minutes = Math.max(1, Math.round(Math.max(elapsedSec / 60, p.duration * (workout.done.length / p.exercises.length))));
+  const kcal = Math.max(5, Math.round(p.kcal * ratio));
+  records.unshift({ id: genId(), planTitle: p.title, date: todayStr(), minutes, kcal, doneCount: workout.done.length, total: p.exercises.length });
+  saveRecords();
+  exitWorkout();
+  clearSession();
+  toast(`已记录：${minutes} 分钟 · ${kcal} 千卡 🔥`);
+  showTab('stats');
+}
+function exitWorkout() {
+  clearInterval(workoutIv); workoutIv = null;
+  releaseWake();
+  if (workoutSub) {
+    const el = workoutSub;
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 220);
+    workoutSub = null;
+  }
 }
 
 /* ================= 饮食页 ================= */
@@ -751,6 +955,28 @@ function renderMine() {
       <p class="muted" style="margin-top:10px">当前：${theme === 'auto' ? (systemDark() ? '跟随系统（深色）' : '跟随系统（浅色）') : THEME_LABELS[theme]}</p>
     </div>
     <div class="card">
+      <h3>训练偏好</h3>
+      <div class="set-row"><span>🔊 提示音</span>
+        <span class="seg">
+          <span class="seg-i ${settings.sound ? 'on' : ''}" data-set="sound" data-v="1">开</span>
+          <span class="seg-i ${!settings.sound ? 'on' : ''}" data-set="sound" data-v="0">关</span>
+        </span>
+      </div>
+      <div class="set-row"><span>📳 震动反馈</span>
+        <span class="seg">
+          <span class="seg-i ${settings.vibrate ? 'on' : ''}" data-set="vibrate" data-v="1">开</span>
+          <span class="seg-i ${!settings.vibrate ? 'on' : ''}" data-set="vibrate" data-v="0">关</span>
+        </span>
+      </div>
+      <div class="set-row"><span>⏱ 休息时长</span>
+        <span class="seg">${[30, 45, 60].map(s => `<span class="seg-i ${settings.restSec === s ? 'on' : ''}" data-set="restSec" data-v="${s}">${s}秒</span>`).join('')}</span>
+      </div>
+      <div class="set-row"><span>🔍 字体大小</span>
+        <span class="seg">${['normal', 'large', 'xlarge'].map(f => `<span class="seg-i ${settings.fs === f ? 'on' : ''}" data-set="fs" data-v="${f}">${f === 'normal' ? '标准' : f === 'large' ? '大' : '超大'}</span>`).join('')}</span>
+      </div>
+      <p class="muted" style="margin-top:10px;line-height:1.6">首次训练点「开始」即激活声音；浏览器询问通知权限时点「允许」，锁屏时休息结束也能收到提醒。</p>
+    </div>
+    <div class="card">
       <h3>账号与云同步</h3>
       ${auth.token ? `
         <p style="margin:4px 0 10px">👤 <b>${esc(auth.username)}</b> <span class="muted">· 已登录</span></p>
@@ -775,7 +1001,7 @@ function renderMine() {
     </div>
     <div class="card">
       <h3>关于轻练</h3>
-      <p class="muted">轻练 · 合理健身网站版 v1.1.0</p>
+      <p class="muted">轻练 · 合理健身网站版 v1.2.0</p>
       <p class="muted" style="margin-top:4px">数据默认保存在本机浏览器；登录账号后可云同步到服务器，随时换设备恢复。</p>
     </div>
   `;
@@ -788,6 +1014,16 @@ function renderMine() {
     profile.goal = el.dataset.goal; saveProfile(); renderMine(); toast('目标已切换为 ' + profile.goal);
   }));
   $$('#app [data-theme]').forEach(el => el.addEventListener('click', () => { setTheme(el.dataset.theme); renderMine(); }));
+  $$('#app [data-set]').forEach(el => el.addEventListener('click', () => {
+    const k = el.dataset.set;
+    let v = el.dataset.v;
+    if (k === 'sound' || k === 'vibrate') v = v === '1';
+    else if (k === 'restSec') v = +v;
+    settings[k] = v;
+    saveSettings();
+    renderMine();
+    if (k === 'sound' && settings.sound) beep(880, .15);
+  }));
   if (auth.token) {
     $('#cloudUploadBtn').addEventListener('click', cloudUpload);
     $('#cloudDownloadBtn').addEventListener('click', cloudDownload);
@@ -801,7 +1037,19 @@ function renderMine() {
 
 /* ================= 初始化 ================= */
 applyTheme();
+applyFontScale();
 $$('#tabbar a').forEach(a => a.addEventListener('click', () => showTab(a.dataset.tab)));
+
+// 恢复未完成的训练会话（今天、有进度）；隔日的旧会话清除
+function resumeSessionIfAny() {
+  const s = store.get('session', null);
+  if (!s) return;
+  if (s.date === todayStr() && (s.elapsed > 0 || (s.done && s.done.length) || s.running)) {
+    openWorkout(s.planId, s);
+  } else {
+    store.set('session', null);
+  }
+}
 
 // 登录门控：未登录时显示登录界面，登录后才进入应用
 function showLoginGate() {
@@ -843,6 +1091,7 @@ async function gateAuth(mode) {
       // 登录后若本地无数据且云端有，自动恢复
       if (records.length === 0 && dietEntries.length === 0) cloudDownload();
       showTab('home');
+      resumeSessionIfAny();
     } else {
       toast(r.msg || '操作失败');
     }
@@ -867,6 +1116,7 @@ async function initApp() {
           syncApply(r.data);
         }
         showTab('home');
+        resumeSessionIfAny();
       } else {
         showLoginGate();
       }
@@ -875,6 +1125,7 @@ async function initApp() {
       if (records.length > 0 || dietEntries.length > 0 || Object.keys(profile).length > 1) {
         toast('离线模式 · 数据将在联网后同步');
         showTab('home');
+        resumeSessionIfAny();
       } else {
         showLoginGate();
       }
