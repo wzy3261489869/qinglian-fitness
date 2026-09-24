@@ -166,11 +166,17 @@ app.get('/api/_nettest', async (c) => {
   {
     const t0 = Date.now();
     try {
-      const client = new Client({ connectionString: c.env.DATABASE_URL, wsConstructor: WebSocket });
-      await client.connect();
-      const r = await client.query('SELECT 1 AS ok');
-      await client.end();
-      out.ws = { ms: Date.now() - t0, rows: r.rows };
+      const wsProbe = (async () => {
+        const client = new Client({ connectionString: c.env.DATABASE_URL, wsConstructor: WebSocket });
+        await client.connect();
+        const r = await client.query('SELECT 1 AS ok');
+        await client.end();
+        return r.rows;
+      })();
+      out.ws = { ms: Date.now() - t0, rows: await Promise.race([
+        wsProbe,
+        sleep(8000).then(() => { throw new Error('ws handshake timeout'); })
+      ]) };
     } catch (e) { out.ws = { ms: Date.now() - t0, err: String(e && e.message || e).slice(0, 120) }; }
   }
   return c.json(out);
