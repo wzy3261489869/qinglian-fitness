@@ -116,34 +116,6 @@ const EXERCISES = [
   { id: 'e54', name: '俯卧撑触肩', part: '核心', level: '中级', minutes: 4, kcal: 40, desc: '俯卧撑姿态交替触对侧肩，强化核心稳定。' },
   { id: 'e55', name: '跪姿钻石俯卧撑', part: '胸臂', level: '新手', minutes: 4, kcal: 30, desc: '跪姿完成钻石俯卧撑，降低难度保护手腕。' }
 ];
-const FOODS = [
-  { id: 'f1', name: '米饭', category: '主食', kcal: 232, protein: 5.2, carb: 52, fat: .6, unit: '1碗/200g', cover: 292 },
-  { id: 'f2', name: '清汤面条', category: '主食', kcal: 280, protein: 9, carb: 55, fat: 2, unit: '1碗/250g', cover: 312 },
-  { id: 'f3', name: '全麦面包', category: '主食', kcal: 75, protein: 4, carb: 13, fat: 1, unit: '1片/30g', cover: 326 },
-  { id: 'f4', name: '燕麦片', category: '主食', kcal: 150, protein: 5, carb: 26, fat: 3, unit: '1份/40g', cover: 401 },
-  { id: 'f5', name: '蒸红薯', category: '主食', kcal: 172, protein: 2.4, carb: 40, fat: .2, unit: '1个/200g', cover: 431 },
-  { id: 'f6', name: '水煮玉米', category: '主食', kcal: 112, protein: 4, carb: 22, fat: 1.2, unit: '1根/200g', cover: 570 },
-  { id: 'f7', name: '水煮蛋', category: '肉蛋奶', kcal: 78, protein: 6.5, carb: .6, fat: 5.5, unit: '1个/50g', cover: 580 },
-  { id: 'f8', name: '鸡胸肉', category: '肉蛋奶', kcal: 118, protein: 21, carb: 0, fat: 3, unit: '1份/100g', cover: 625 },
-  { id: 'f9', name: '瘦牛肉', category: '肉蛋奶', kcal: 125, protein: 20, carb: 2, fat: 4, unit: '1份/100g', cover: 835 },
-  { id: 'f10', name: '三文鱼', category: '肉蛋奶', kcal: 139, protein: 19, carb: 0, fat: 6.5, unit: '1份/100g', cover: 1080 },
-  { id: 'f11', name: '白灼虾', category: '肉蛋奶', kcal: 87, protein: 18, carb: .5, fat: 1.2, unit: '1份/100g', cover: 292 },
-  { id: 'f12', name: '纯牛奶', category: '肉蛋奶', kcal: 135, protein: 8, carb: 10, fat: 7.5, unit: '1盒/250ml', cover: 312 },
-  { id: 'f13', name: '无糖酸奶', category: '肉蛋奶', kcal: 90, protein: 9, carb: 7.5, fat: 3, unit: '1杯/150g', cover: 326 },
-  { id: 'f14', name: '北豆腐', category: '肉蛋奶', kcal: 120, protein: 12, carb: 4, fat: 7, unit: '1份/150g', cover: 401 },
-  { id: 'f15', name: '西兰花', category: '蔬菜', kcal: 68, protein: 5.6, carb: 9, fat: .8, unit: '1份/200g', cover: 431 },
-  { id: 'f16', name: '番茄', category: '蔬菜', kcal: 22, protein: 1.1, carb: 4.8, fat: .2, unit: '1个/150g', cover: 570 },
-  { id: 'f17', name: '黄瓜', category: '蔬菜', kcal: 32, protein: 1.6, carb: 6, fat: .4, unit: '1根/200g', cover: 580 },
-  { id: 'f18', name: '生菜', category: '蔬菜', kcal: 15, protein: 1.4, carb: 2, fat: .2, unit: '1份/100g', cover: 625 },
-  { id: 'f19', name: '苹果', category: '水果', kcal: 95, protein: .5, carb: 25, fat: .3, unit: '1个/200g', cover: 835 },
-  { id: 'f20', name: '香蕉', category: '水果', kcal: 105, protein: 1.3, carb: 27, fat: .4, unit: '1根/120g', cover: 1080 },
-  { id: 'f21', name: '橙子', category: '水果', kcal: 62, protein: 1.2, carb: 15, fat: .2, unit: '1个/150g', cover: 292 },
-  { id: 'f22', name: '混合坚果', category: '坚果零食', kcal: 180, protein: 6, carb: 6, fat: 15, unit: '1小把/30g', cover: 312 },
-  { id: 'f23', name: '黑巧克力', category: '坚果零食', kcal: 108, protein: 1.2, carb: 9, fat: 7, unit: '2小块/20g', cover: 326 },
-  { id: 'f24', name: '黑咖啡', category: '饮品', kcal: 5, protein: 0, carb: 0, fat: 0, unit: '1杯/300ml', cover: 401 },
-  { id: 'f25', name: '无糖豆浆', category: '饮品', kcal: 80, protein: 7, carb: 4, fat: 3.5, unit: '1杯/250ml', cover: 431 },
-  { id: 'f26', name: '可乐', category: '饮品', kcal: 140, protein: 0, carb: 35, fat: 0, unit: '1罐/330ml', cover: 570 }
-];
 const MEALS = ['早餐', '午餐', '晚餐', '加餐'];
 const MEAL_ICONS = { '早餐': '🌅', '午餐': '☀️', '晚餐': '🌙', '加餐': '🍎' };
 const GOALS = ['减脂', '增肌', '塑形', '入门'];
@@ -163,11 +135,13 @@ let profile = Object.assign({ nickname: '健身新人', gender: '男', age: 25, 
 let records = store.get('records', []);
 let dietEntries = store.get('dietEntries', []);
 let waterMap = store.get('waterMap', {});
+let weightMap = store.get('weightMap', {});
 
 const saveProfile = () => store.set('profile', profile);
 const saveRecords = () => store.set('records', records);
 const saveDiet = () => store.set('dietEntries', dietEntries);
 const saveWater = () => store.set('waterMap', waterMap);
+const saveWeightMap = () => store.set('weightMap', weightMap);
 
 /* ================= 训练设置（声音/震动/休息时长/字号） ================= */
 const DEFAULT_SETTINGS = { sound: true, vibrate: true, restSec: 30, fs: 'normal' };
@@ -213,7 +187,7 @@ async function api(method, path, body, timeoutMs) {
   catch (e) { return { ok: false, msg: '服务器响应异常，请稍后重试', net: true }; }
 }
 function syncCollect() {
-  return { profile, records, dietEntries, waterMap, theme, v: 1 };
+  return { profile, records, dietEntries, waterMap, weightMap, dietCfg: store.get('dietCfg', null), theme, v: 2 };
 }
 function syncApply(data) {
   if (!data || typeof data !== 'object') return;
@@ -221,6 +195,8 @@ function syncApply(data) {
   if (Array.isArray(data.records)) { records = data.records; saveRecords(); }
   if (Array.isArray(data.dietEntries)) { dietEntries = data.dietEntries; saveDiet(); }
   if (data.waterMap) { waterMap = data.waterMap; saveWater(); }
+  if (data.weightMap) { weightMap = data.weightMap; saveWeightMap(); }
+  if (data.dietCfg) store.set('dietCfg', data.dietCfg);
   if (data.theme) { theme = data.theme; applyTheme(); }
 }
 async function cloudUpload() {
@@ -310,11 +286,13 @@ function addDays(dateStr, n) {
 function calcPlan(p) {
   const base = 10 * p.weight + 6.25 * p.height - 5 * p.age;
   const bmr = Math.round(p.gender === '男' ? base + 5 : base - 161);
-  const tdee = Math.round(bmr * 1.4);
-  let target = Math.round(tdee * .9);
-  if (p.goal === '减脂') target = Math.round(tdee * .8);
-  else if (p.goal === '增肌') target = tdee + 300;
-  else if (p.goal === '塑形') target = Math.round(tdee * .88);
+  const cfg = store.get('dietCfg', { activity: 1.4, custom: null });
+  const activity = cfg.activity || 1.4;
+  const tdee = Math.round(bmr * activity);
+  // 热量缺口/盈余随目标
+  const delta = p.goal === '减脂' ? -400 : p.goal === '增肌' ? 300 : p.goal === '塑形' ? -200 : 0;
+  let target = tdee + delta;
+  if (cfg.custom != null) target = cfg.custom;
   const pf = (p.goal === '增肌' || p.goal === '减脂') ? 1.8 : p.goal === '塑形' ? 1.5 : 1.2;
   const proteinTarget = Math.round(p.weight * pf);
   const fatTarget = Math.round(target * .25 / 9);
@@ -322,12 +300,16 @@ function calcPlan(p) {
   return { bmr, tdee, target, proteinTarget, carbTarget, fatTarget };
 }
 function sumNutrition(list) {
-  return list.reduce((a, e) => ({
-    kcal: a.kcal + e.kcal * e.servings,
-    protein: a.protein + e.protein * e.servings,
-    carb: a.carb + e.carb * e.servings,
-    fat: a.fat + e.fat * e.servings
-  }), { kcal: 0, protein: 0, carb: 0, fat: 0 });
+  // 新数据：每100g营养值 + grams；旧数据：每份 + servings
+  return list.reduce((a, e) => {
+    const m = e.grams != null ? e.grams / 100 : (e.servings || 1);
+    return {
+      kcal: a.kcal + e.kcal * m,
+      protein: a.protein + e.protein * m,
+      carb: a.carb + e.carb * m,
+      fat: a.fat + e.fat * m
+    };
+  }, { kcal: 0, protein: 0, carb: 0, fat: 0 });
 }
 function bmiInfo() {
   const v = profile.weight / Math.pow(profile.height / 100, 2);
@@ -914,129 +896,7 @@ function thumbFor(name) {
 
 /* ================= 饮食页 ================= */
 function renderDiet() {
-  const today = todayStr();
-  const list = dietEntries.filter(e => e.date === today);
-  const nutri = sumNutrition(list);
-  const plan = calcPlan(profile);
-  const workoutKcal = records.filter(r => r.date === today).reduce((s, r) => s + r.kcal, 0);
-  const budget = plan.target + workoutKcal;
-  const remaining = Math.round(budget - nutri.kcal);
-  const cups = waterMap[today] || 0;
-  const byMeal = m => list.filter(e => e.meal === m);
-
-  $('#app').innerHTML = `
-    <div class="page-head"><h1>饮食控制</h1><p>吃动平衡 · 记录每日热量与营养</p></div>
-    <div class="hero">
-      <div>
-        <div class="label">今日已摄入</div>
-        <div class="big">${Math.round(nutri.kcal)}<small> 千卡</small></div>
-        <div class="label" style="margin-top:4px">基础目标 ${plan.target} 千卡</div>
-      </div>
-      <div class="ring-wrap">${ring(nutri.kcal / Math.max(budget, 1) * 100, '#ffffff', 'rgba(255,255,255,.28)')}
-        <div class="rtext"><b>${Math.min(999, Math.round(nutri.kcal / Math.max(budget, 1) * 100))}%</b><i>热量进度</i></div>
-      </div>
-    </div>
-    <div class="card" style="display:flex;align-items:center;gap:8px">
-      <span>⚖️</span>
-      <span style="flex:1;font-size:13px;color:var(--text-2)">${remaining >= 0 ? '今日还可摄入' : '已超出目标'}</span>
-      <b style="color:${remaining >= 0 ? 'var(--primary)' : 'var(--accent)'}">${Math.abs(remaining)} 千卡</b>
-    </div>
-    ${workoutKcal > 0 ? `<p class="muted" style="margin:8px 2px 0">今日运动消耗 ${workoutKcal} 千卡，已计入可摄入额度</p>` : ''}
-    <div class="card">
-      <h3>营养素概览</h3>
-      ${[['蛋白质', nutri.protein, plan.proteinTarget, ''], ['碳水化合物', nutri.carb, plan.carbTarget, 'c-blue'], ['脂肪', nutri.fat, plan.fatTarget, 'c-orange']].map(([n, v, t, cls]) => `
-        <div class="nutri-row">
-          <div class="nh"><span>${n}</span><span class="v">${Math.round(v)} <em>/ ${t} g</em></span></div>
-          <div class="bar ${cls}"><i style="width:${Math.min(100, v / Math.max(t, 1) * 100)}%"></i></div>
-        </div>`).join('')}
-    </div>
-    <div class="card">
-      ${MEALS.map(m => {
-        const ml = byMeal(m);
-        const mk = ml.reduce((s, e) => s + e.kcal * e.servings, 0);
-        return `<div class="meal">
-          <div class="mh"><span>${MEAL_ICONS[m]}</span><b>${m}</b>
-            ${mk > 0 ? `<span class="mk">${mk} 千卡</span>` : ''}
-            <span class="plus" data-meal="${m}">＋</span>
-          </div>
-          ${ml.length ? ml.map(e => `
-            <div class="entry"><span class="dot"></span>
-              <span class="en">${esc(e.foodName)} ×${e.servings}</span>
-              <span class="ek">${Math.round(e.kcal * e.servings)} 千卡</span>
-              <span class="del" data-del="${e.id}">删除</span>
-            </div>`).join('') : `<p class="muted" style="padding:6px 0 0 4px">点击 ＋ 记录${m}</p>`}
-        </div>`;
-      }).join('')}
-    </div>
-    <div class="card">
-      <h3>每日饮水（目标 8 杯）</h3>
-      <div class="water-cups">${Array.from({ length: 8 }, (_, i) => `<span class="${i < cups ? 'on' : ''}" data-cup="${i}">💧</span>`).join('')}</div>
-      <p class="muted" style="text-align:center">已喝 ${cups}/8 杯 · 少量多次更健康</p>
-    </div>
-    <div class="tips"><span>🥗</span><p>每餐一拳主食、一掌优质蛋白、两拳蔬菜；减脂期缺口 300-500 千卡更可持续。</p></div>
-  `;
-  $$('#app .plus').forEach(el => el.addEventListener('click', () => openDietAdd(el.dataset.meal)));
-  $$('#app .del').forEach(el => el.addEventListener('click', () => {
-    dietEntries = dietEntries.filter(e => e.id !== el.dataset.del);
-    saveDiet(); renderDiet(); toast('已移除');
-  }));
-  $$('#app .water-cups span').forEach(el => el.addEventListener('click', () => {
-    const i = +el.dataset.cup;
-    waterMap[today] = cups === i + 1 ? i : i + 1;
-    saveWater(); renderDiet();
-  }));
-}
-let dietFilter = '全部', dietKeyword = '';
-function openDietAdd(meal) {
-  const sub = document.createElement('div');
-  sub.className = 'subpage';
-  let added = 0;
-  const servings = {};
-  const drawList = () => {
-    const kw = dietKeyword.trim();
-    const list = FOODS.filter(f => (dietFilter === '全部' || f.category === dietFilter) && (!kw || f.name.includes(kw)));
-    $('#faList', sub).innerHTML = list.length ? list.map(f => {
-      const s = servings[f.id] || 1;
-      return `<div class="food-item">
-        <img src="${cover(f.cover)}" alt="" loading="lazy" onerror="this.style.visibility='hidden'"/>
-        <div class="fi"><b>${esc(f.name)}</b><span>${esc(f.unit)}</span><span style="color:var(--accent)">${f.kcal}千卡/份</span></div>
-        <div class="stepper">
-          <button class="minus" data-id="${f.id}" data-d="-1">−</button><b>${s}</b><button data-id="${f.id}" data-d="1">＋</button>
-        </div>
-        <button class="add-btn" data-add="${f.id}">添加</button>
-      </div>`;
-    }).join('') : '<div class="empty"><i>🍽️</i>没有找到相关食物</div>';
-    $$('.stepper button', sub).forEach(b => b.addEventListener('click', () => {
-      const id = b.dataset.id;
-      servings[id] = Math.max(1, Math.min(9, (servings[id] || 1) + (+b.dataset.d)));
-      drawList();
-    }));
-    $$('[data-add]', sub).forEach(b => b.addEventListener('click', () => {
-      const f = FOODS.find(x => x.id === b.dataset.add);
-      dietEntries.push({
-        id: genId(), date: todayStr(), meal, foodId: f.id, foodName: f.name,
-        servings: servings[f.id] || 1, kcal: f.kcal, protein: f.protein, carb: f.carb, fat: f.fat
-      });
-      saveDiet(); added++; toast(`已添加到${meal}`);
-    }));
-  };
-  sub.innerHTML = `
-    <div class="sp-head"><span class="back">‹</span><b>添加食物 · ${meal}</b></div>
-    <div class="sp-body">
-      <div class="search">🔍<input id="faSearch" placeholder="搜索食物名称" /></div>
-      <div class="chips">${['全部', '主食', '肉蛋奶', '蔬菜', '水果', '坚果零食', '饮品'].map(c => `<span class="chip ${dietFilter === c ? 'active' : ''}" data-c="${c}">${c}</span>`).join('')}</div>
-      <div id="faList" style="margin-top:8px"></div>
-    </div>
-    <div style="position:sticky;bottom:0;background:rgba(255,255,255,.97);padding:12px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--border)">
-      <button class="btn full" id="faDone">完成${added ? `（已加 ${added} 项）` : ''}</button>
-    </div>`;
-  document.body.appendChild(sub);
-  sub.classList.add('show');
-  drawList();
-  $('#faSearch', sub).addEventListener('input', e => { dietKeyword = e.target.value; drawList(); });
-  $$('.chip', sub).forEach(c => c.addEventListener('click', () => { dietFilter = c.dataset.c; $$('.chip', sub).forEach(x => x.classList.toggle('active', x === c)); drawList(); }));
-  $('#faDone', sub).addEventListener('click', () => { sub.remove(); closeSubpages(); showTab('diet'); });
-  $('.back', sub).addEventListener('click', () => { sub.remove(); showTab('diet'); });
+  DietModule.renderDiet();
 }
 
 /* ================= 数据页 ================= */
@@ -1133,8 +993,12 @@ function renderMine() {
       </div>
       <div class="bmi-row" id="rowAge"><span class="bl">年龄</span><span class="bv">${profile.age} 岁</span></div>
       <div class="bmi-row" id="rowH"><span class="bl">身高</span><span class="bv">${profile.height} cm</span></div>
-      <div class="bmi-row" id="rowW"><span class="bl">体重</span><span class="bv">${profile.weight} kg</span></div>
+      <div class="bmi-row" id="rowW"><span class="bl">体重</span><span class="bv">${profile.weight} kg · 点击更新曲线</span></div>
       <div class="bmi-row" id="rowTW"><span class="bl">目标体重</span><span class="bv">${profile.targetWeight} kg</span></div>
+    </div>
+    <div class="card">
+      <h3>体重 · 饮食趋势（近 14 天）</h3>
+      <div id="trendBox"></div>
     </div>
     <div class="card">
       <h3>健身目标</h3>
@@ -1193,14 +1057,14 @@ function renderMine() {
     </div>
     <div class="card">
       <h3>关于轻练</h3>
-      <p class="muted">轻练 · 合理健身网站版 v1.3.0</p>
+      <p class="muted">轻练 · 合理健身网站版 v1.6.0</p>
       <p class="muted" style="margin-top:4px">数据默认保存在本机浏览器；登录账号后可云同步到服务器，随时换设备恢复。</p>
     </div>
   `;
   $('#editNick').addEventListener('click', () => editField('昵称', 'nickname', 'text'));
   $('#rowAge').addEventListener('click', () => editField('年龄', 'age', 'num'));
   $('#rowH').addEventListener('click', () => editField('身高（cm）', 'height', 'num'));
-  $('#rowW').addEventListener('click', () => editField('体重（kg）', 'weight', 'num'));
+  $('#rowW').addEventListener('click', () => DietModule.openWeight());
   $('#rowTW').addEventListener('click', () => editField('目标体重（kg）', 'targetWeight', 'num'));
   $$('#app [data-goal]').forEach(el => el.addEventListener('click', () => {
     profile.goal = el.dataset.goal; saveProfile(); renderMine(); toast('目标已切换为 ' + profile.goal);
@@ -1225,6 +1089,7 @@ function renderMine() {
     $('#authBtnReg').addEventListener('click', () => doAuth('reg'));
     $('#authPass').addEventListener('keydown', e => { if (e.key === 'Enter') doAuth('login'); });
   }
+  DietModule.mountTrend();
 }
 
 /* ================= 初始化 ================= */
