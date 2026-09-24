@@ -1135,3 +1135,124 @@ body {
   .modal { border-radius: 22px; padding: 24px 22px; }
   .act-opts { grid-template-columns: repeat(5, 1fr); }
 }
+
+/* ============================================
+   打卡激励模块 v1.7：热力图/海报/提醒/鼓励
+   ============================================ */
+
+/* ---- 热力图 ---- */
+.hm-summary { display: flex; gap: 10px; margin-bottom: 10px; }
+.hm-summary span {
+  flex: 1; background: var(--bg-card); border-radius: 12px; box-shadow: var(--shadow);
+  text-align: center; padding: 10px 0; font-size: 11px; color: var(--text-3);
+}
+.hm-summary b { display: block; font-size: 20px; color: var(--text-1); font-weight: 800; }
+.hm-scroll { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+.hm-inner { position: relative; width: max-content; padding-bottom: 2px; }
+.hm-months { position: relative; height: 20px; margin-left: 26px; }
+.hm-month { position: absolute; top: 0; font-size: 10.5px; color: var(--text-3); }
+.hm-grid-wrap { display: flex; gap: 4px; position: relative; }
+.hm-wd { display: flex; flex-direction: column; justify-content: space-between; padding: 2px 0;
+  font-size: 9px; color: var(--text-3); width: 12px; }
+.hm-grid { display: grid; grid-template-rows: repeat(7, 10px); grid-auto-flow: column;
+  grid-auto-columns: 10px; gap: 3px; }
+.hm-c {
+  width: 10px; height: 10px; border-radius: 2.5px; display: inline-block;
+  background: var(--divider); cursor: default;
+}
+.hm-c.lv1 { background: #a8ecd4; }
+.hm-c.lv2 { background: #4fd6a5; }
+.hm-c.lv3 { background: #00b578; }
+.hm-c.lv4 { background: #007d55; }
+.hm-c.today { outline: 2px solid var(--accent); outline-offset: 1px; }
+.hm-c.future { background: transparent; }
+.hm-legend { display: flex; align-items: center; gap: 5px; margin-top: 12px;
+  font-size: 11px; color: var(--text-3); justify-content: flex-end; }
+.hm-legend .hm-c { width: 12px; height: 12px; border-radius: 3px; cursor: default; }
+.hm-tip {
+  position: absolute; z-index: 5; width: 120px; box-sizing: border-box;
+  background: rgba(20,28,36,.92); color: #fff; font-size: 11px; text-align: center;
+  padding: 6px 4px; border-radius: 8px; pointer-events: none;
+}
+:root[data-theme="dark"] .hm-c.lv1 { background: #0e5c44; }
+:root[data-theme="dark"] .hm-c.lv2 { background: #0a8a63; }
+:root[data-theme="dark"] .hm-c.lv3 { background: #12b57c; }
+:root[data-theme="dark"] .hm-c.lv4 { background: #3fd6a0; }
+
+/* ---- 分享海报 ---- */
+.rw-share-modal { max-width: 420px; }
+.poster-preview {
+  margin-top: 14px; border-radius: 16px; overflow: hidden;
+  background: var(--divider); max-height: 56vh; display: flex;
+  align-items: center; justify-content: center;
+}
+.poster-preview img { width: 100%; height: auto; display: block; }
+.poster-loading { padding: 60px 0; font-size: 14px; color: var(--text-3); }
+.rw-share-today {
+  display: flex; align-items: center; gap: 10px; cursor: pointer;
+}
+.rw-share-today .st-ic {
+  width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
+  background: rgba(0,181,120,.12); display: flex; align-items: center; justify-content: center; font-size: 21px;
+}
+.rw-share-today b { font-size: 14.5px; display: block; }
+.rw-share-today small { font-size: 12px; color: var(--text-3); }
+.rw-share-today .go-arrow { margin-left: auto; color: var(--primary-dark); font-weight: 700; }
+.rec .share-link { color: var(--primary-dark); font-size: 12px; cursor: pointer; padding: 2px 4px; }
+
+/* ---- 训练提醒 ---- */
+.rw-switch-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.rw-switch-row b { font-size: 14.5px; display: block; }
+.rw-switch-row small { display: block; font-size: 11.5px; color: var(--text-3); margin-top: 2px; }
+.rw-switch {
+  width: 48px; height: 28px; border-radius: 999px; background: var(--divider);
+  position: relative; cursor: pointer; flex-shrink: 0; transition: background .2s;
+}
+.rw-switch::after {
+  content: ''; position: absolute; top: 3px; left: 3px;
+  width: 22px; height: 22px; border-radius: 999px; background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: transform .2s;
+}
+.rw-switch.on { background: var(--primary); }
+.rw-switch.on::after { transform: translateX(20px); }
+.rw-switch:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.rw-time-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  margin-top: 12px; font-size: 13px; color: var(--text-2);
+}
+.rw-time-row.off { opacity: .4; pointer-events: none; }
+.rw-time-row input {
+  border: 1.5px solid var(--border); border-radius: 10px; background: var(--bg-card);
+  color: var(--text-1); font-size: 16px; padding: 6px 10px;
+  font-variant-numeric: tabular-nums;
+}
+.rw-note { margin-top: 10px; font-size: 11.5px; line-height: 1.6; }
+.rw-warn { color: var(--accent); margin-top: 8px; }
+
+/* ---- 温和鼓励卡片 ---- */
+.rw-encourage {
+  display: flex; align-items: center; gap: 12px;
+  margin-top: 12px; padding: 15px; border-radius: 18px;
+  background: linear-gradient(135deg, #f0fbf6, #e7f8f0);
+  cursor: pointer; border: 1.5px solid rgba(0,181,120,.2);
+}
+.rwe-ic {
+  width: 46px; height: 46px; border-radius: 14px; flex-shrink: 0;
+  background: #fff; display: flex; align-items: center; justify-content: center; font-size: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+}
+.rwe-tx { flex: 1; min-width: 0; }
+.rwe-tx b { font-size: 15px; color: #12412f; }
+.rwe-tx p { font-size: 12.5px; color: #35604f; line-height: 1.55; margin: 3px 0; }
+.rwe-tx small { font-size: 11px; color: #6d9181; }
+.rwe-cta { font-size: 13px; font-weight: 800; color: var(--primary-dark); flex-shrink: 0; }
+:root[data-theme="dark"] .rw-encourage { background: linear-gradient(135deg, rgba(0,181,120,.13), rgba(0,181,120,.07)); border-color: rgba(54,201,154,.25); }
+:root[data-theme="dark"] .rwe-tx b, :root[data-theme="dark"] .rwe-tx p { color: var(--text-1); }
+:root[data-theme="dark"] .rwe-tx small { color: var(--text-3); }
+:root[data-theme="dark"] .rwe-ic { background: #262a32; }
+
+/* ---- 桌面宽屏 ---- */
+@media (min-width:1024px) {
+  .rw-share-modal { max-width: 460px; }
+  .poster-preview { max-height: 64vh; }
+}

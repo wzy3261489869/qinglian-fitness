@@ -389,6 +389,7 @@ function renderHome() {
       <div class="gs"><b>${records.length}</b><span>总次数</span></div>
       <div class="gs"><b>${records.reduce((s, r) => s + r.kcal, 0)}</b><span>总千卡</span></div>
     </div>
+    ${RewardsModule.encouragementHTML()}
     <div class="section-title"><h2>今日训练</h2><a data-nav="plan">课表 ›</a></div>
     ${PlanModule.todayCard()}
     <div class="section-title"><h2>快捷入口</h2></div>
@@ -930,6 +931,18 @@ function renderStats() {
       <div class="st"><b>${streak}</b><span>连续打卡（天）</span></div>
       <div class="st"><b>${records.filter(r => r.date === today).length}</b><span>今日训练</span></div>
     </div>
+    <div class="card rw-share-today" data-rw="share-today">
+      <span class="st-ic">🏅</span>
+      <span><b>生成训练海报</b><small>${records.some(r => r.date === today) ? '今日数据已就绪 · 生成分享卡片' : '完成今日训练后即可生成'}</small></span>
+      <span class="go-arrow">海报 ›</span>
+    </div>
+    <div class="card">
+      <h3>训练热力图（近一年）</h3>
+      ${RewardsModule.heatmapHTML()}
+    </div>
+    <div class="card">
+      ${RewardsModule.reminderHTML()}
+    </div>
     <div class="card"><h3>近 7 天耗能</h3>
       <div class="chart">${weekData.map(x => `
         <div class="col"><i style="height:${Math.round(x.kcal / maxK * 88)}%" title="${x.kcal}"></i><em>${x.d.slice(5).replace('-', '/')}</em></div>`).join('')}
@@ -941,6 +954,7 @@ function renderStats() {
         <div class="rec">
           <div class="ri"><b>${esc(r.planTitle)}</b><span>${r.date} · ${r.minutes} 分钟 · ${r.doneCount}/${r.total} 动作</span></div>
           <b style="color:var(--accent);font-size:13px">${r.kcal} 千卡</b>
+          <span class="share-link" data-rw="share-date" data-date="${r.date}">海报</span>
           <span class="del" data-del="${r.id}">删除</span>
         </div>`).join('') : '<div class="empty"><i>📝</i>还没有训练记录，去开始第一次训练吧</div>'}
     </div>
@@ -1057,7 +1071,7 @@ function renderMine() {
     </div>
     <div class="card">
       <h3>关于轻练</h3>
-      <p class="muted">轻练 · 合理健身网站版 v1.6.0</p>
+      <p class="muted">轻练 · 合理健身网站版 v1.7.0</p>
       <p class="muted" style="margin-top:4px">数据默认保存在本机浏览器；登录账号后可云同步到服务器，随时换设备恢复。</p>
     </div>
   `;
