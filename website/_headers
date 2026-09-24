@@ -21,3 +21,8 @@
 
 /manifest.webmanifest
   Cache-Control: public, max-age=86400
+
+# APK 安装包不缓存，确保下载到最新版
+/qinglian.apk
+  Cache-Control: no-cache
+  Content-Type: application/vnd.android.package-archive
