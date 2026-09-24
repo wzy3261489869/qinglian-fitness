@@ -37,3 +37,7 @@ Thumbs.db
 android-keystore/
 *.keystore
 android-twa/
+
+# 参考用嵌套仓库（不入主仓库）
+exercises-dataset/
+workout-cool/
