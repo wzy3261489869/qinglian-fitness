@@ -425,22 +425,62 @@ function foodSkeletonRows(n) {
   return s;
 }
 
-/* 数字滚动（count-up） */
+/* ============== 数字格式与指标卡（v1.9.0 统一数据展示） ============== */
+/* 千分位整数：1234 -> 1,234 */
+function grp(v) {
+  return String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+/* 重量：统一 1 位小数 */
+function fmtWeight(v) { return (+v).toFixed(1); }
+
+/* 涨跌对比（绿涨红跌）。cur/prev 同精度；opts: {decimals, unit, label} */
+function deltaHTML(cur, prev, opts) {
+  opts = opts || {};
+  if (prev === null || prev === undefined || isNaN(prev)) return '';
+  const dec = opts.decimals || 0;
+  const d = cur - prev;
+  const label = opts.label || '较昨日';
+  if (Math.abs(d) < (dec ? 0.05 : 0.5)) return `<span class="md-flat">${label} 持平</span>`;
+  const up = d > 0;
+  const abs = dec ? Math.abs(d).toFixed(dec) : grp(Math.abs(d));
+  return `<span class="${up ? 'md-up' : 'md-down'}">${label} ${up ? '+' : '−'}${abs}${opts.unit ? ' ' + opts.unit : ''}</span>`;
+}
+
+/* 统一指标卡：指标名(13px 灰) / 数值(24-28px 粗体)+单位(13px 60%) / 对比(10px)
+   num 为 null/undefined 或 emptyZero 且为 0 时显示 "--" */
+function metricCard(label, num, unit, o) {
+  o = o || {};
+  const dec = o.decimals || 0;
+  const has = num !== null && num !== undefined && !isNaN(num) && !(o.emptyZero && num === 0);
+  const txt = has ? (dec ? (+num).toFixed(dec) : grp(num)) : '--';
+  const attrs = has
+    ? ` data-count="${num}"${dec ? ` data-decimals="${dec}"` : ''}${o.group ? ' data-group="1"' : ''}`
+    : '';
+  return `<div class="metric${o.cls ? ' ' + o.cls : ''}">
+    <div class="m-label">${label}</div>
+    <div class="m-value"><span class="m-num${has ? '' : ' no-data'}"${attrs}>${txt}</span>${unit ? `<span class="m-unit">${unit}</span>` : ''}</div>
+    <div class="m-delta">${has ? (o.delta || '') : ''}</div>
+  </div>`;
+}
+
+/* 数字滚动（count-up；支持 data-group 千分位、data-decimals 小数） */
 function runCountUps(scopeEl) {
   const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   $$('[data-count]', scopeEl || document).forEach(el => {
     const to = parseFloat(el.dataset.count);
     if (isNaN(to)) { el.textContent = ''; return; }
     const decimals = el.dataset.decimals ? parseInt(el.dataset.decimals, 10) : 0;
-    if (reduced) { el.textContent = decimals ? to.toFixed(decimals) : String(Math.round(to)); return; }
+    const group = el.dataset.group != null;
+    const out = v => decimals ? v.toFixed(decimals) : (group ? grp(v) : String(Math.round(v)));
+    if (reduced) { el.textContent = out(to); return; }
     const dur = 750, t0 = performance.now();
     function step(t) {
       const p = Math.min(1, (t - t0) / dur);
       const eased = 1 - Math.pow(1 - p, 3);
       const v = to * eased;
-      el.textContent = decimals ? v.toFixed(decimals) : String(Math.round(v));
+      el.textContent = out(v);
       if (p < 1) requestAnimationFrame(step);
-      else el.textContent = decimals ? to.toFixed(decimals) : String(Math.round(to));
+      else el.textContent = out(to);
     }
     requestAnimationFrame(step);
   });
@@ -489,8 +529,12 @@ function closeSubpages() { $$('.subpage').forEach(p => p.classList.remove('show'
 
 /* ================= 首页 ================= */
 function renderHome() {
-  const weekKcal = records.filter(r => r.date >= addDays(todayStr(), -6)).reduce((s, r) => s + r.kcal, 0);
-  const weekCount = records.filter(r => r.date >= addDays(todayStr(), -6)).length;
+  const t = todayStr();
+  const weekKcal = records.filter(r => r.date >= addDays(t, -6)).reduce((s, r) => s + r.kcal, 0);
+  const weekCount = records.filter(r => r.date >= addDays(t, -6)).length;
+  const lastWeekCount = records.filter(r => r.date >= addDays(t, -13) && r.date <= addDays(t, -7)).length;
+  const totalMin = records.reduce((s, r) => s + r.minutes, 0);
+  const totalKcal = records.reduce((s, r) => s + r.kcal, 0);
   const plan = calcPlan(profile);
   const pct = Math.min(100, Math.round(weekKcal / (plan.target * 0.2 || 1) * 100));
   $('#app').innerHTML = `
@@ -505,7 +549,9 @@ function renderHome() {
     <div class="hero">
       <div>
         <div class="label">本周已消耗</div>
-        <div class="big"><span data-count="${weekKcal}">0</span><small> 千卡</small></div>
+        <div class="big">${weekKcal
+          ? `<span data-count="${weekKcal}" data-group="1">${grp(weekKcal)}</span>`
+          : '<span class="no-data">--</span>'}<small> 千卡</small></div>
         <div class="label" style="margin-top:4px">目标 ${esc(profile.goal)} · ${GOAL_TIPS[profile.goal] || ''}</div>
       </div>
       <div class="ring-wrap">${ring(pct, '#ffffff', 'rgba(255,255,255,.28)')}
@@ -518,11 +564,11 @@ function renderHome() {
     ${PlanModule.plans.slice(0, 3).map(PlanModule.planCardHTML).join('')}
     </div>
     <div class="home-col home-col-r">
-    <div class="grid-stats">
-      <div class="gs"><b data-count="${weekCount}">0</b><span>本周训练</span></div>
-      <div class="gs"><b data-count="${records.reduce((s, r) => s + r.minutes, 0)}">0</b><span>总分钟</span></div>
-      <div class="gs"><b data-count="${records.length}">0</b><span>总次数</span></div>
-      <div class="gs"><b data-count="${records.reduce((s, r) => s + r.kcal, 0)}">0</b><span>总千卡</span></div>
+    <div class="grid-stats gs2x2">
+      ${metricCard('本周训练', weekCount, '次', { emptyZero: true, delta: deltaHTML(weekCount, lastWeekCount, { label: '对比上周', unit: '次' }) })}
+      ${metricCard('总分钟', totalMin, '分钟', { group: true, emptyZero: true })}
+      ${metricCard('总次数', records.length, '次', { emptyZero: true })}
+      ${metricCard('总千卡', totalKcal, 'kcal', { group: true, emptyZero: true })}
     </div>
     ${RewardsModule.encouragementHTML()}
     <div class="section-title"><h2>快捷入口</h2></div>
@@ -1068,6 +1114,9 @@ function renderStats() {
     cal += `<span class="d ${ds === today ? 'today' : ''} ${hasRec.has(ds) ? 'has' : ''}">${d}</span>`;
   }
   const recent = records.slice(0, 10);
+  const totalMin = records.reduce((s, r) => s + r.minutes, 0);
+  const totalKcal = records.reduce((s, r) => s + r.kcal, 0);
+  const todayCount = records.filter(r => r.date === today).length;
   $('#app').innerHTML = `
     <div class="page-head">
       <h1>训练数据</h1>
@@ -1075,13 +1124,13 @@ function renderStats() {
     </div>
     ${recordsSegHTML()}
     <div class="grid-stats">
-      <div class="gs"><b data-count="${records.length}">0</b><span>总次数</span></div>
-      <div class="gs"><b data-count="${records.reduce((s, r) => s + r.minutes, 0)}">0</b><span>总分钟</span></div>
-      <div class="gs"><b data-count="${records.reduce((s, r) => s + r.kcal, 0)}">0</b><span>总千卡</span></div>
+      ${metricCard('总次数', records.length, '次', { emptyZero: true })}
+      ${metricCard('总分钟', totalMin, '分钟', { group: true, emptyZero: true })}
+      ${metricCard('总千卡', totalKcal, 'kcal', { group: true, emptyZero: true })}
     </div>
-    <div class="streak-row" style="margin-top:12px">
-      <div class="st"><b data-count="${streak}">0</b><span>连续打卡（天）</span></div>
-      <div class="st"><b data-count="${records.filter(r => r.date === today).length}">0</b><span>今日训练</span></div>
+    <div class="streak-row">
+      ${metricCard('连续打卡', streak, '天', { emptyZero: true, cls: 'm-hot' })}
+      ${metricCard('今日训练', todayCount, '次', { emptyZero: true })}
     </div>
     <div class="stats-dash">
       <div class="card rw-share-today" data-rw="share-today">
@@ -1106,7 +1155,7 @@ function renderStats() {
         ${recent.length ? recent.map(r => `
           <div class="rec">
             <div class="ri"><b>${esc(r.planTitle)}</b><span>${r.date} · ${r.minutes} 分钟 · ${r.doneCount}/${r.total} 动作</span></div>
-            <b style="color:var(--accent);font-size:13px">${r.kcal} 千卡</b>
+            <b class="rec-kcal">${grp(r.kcal)} 千卡</b>
             <span class="share-link" data-rw="share-date" data-date="${r.date}">海报</span>
             <span class="del" data-del="${r.id}">删除</span>
           </div>`).join('') : emptyHTML('record', '还没有训练记录', '完成第一次训练后，数据会出现在这里',
@@ -1157,17 +1206,17 @@ function renderMine() {
       <h3>身体数据</h3>
       <div class="bmi-visual" style="margin-bottom:6px">
         <div class="bmi-num" style="background:${bmi.color}22;color:${bmi.color}">
-          <b>${bmi.v}</b><span>BMI · ${bmi.status}</span>
+          <b>${bmi.v.toFixed(1)}</b><span>BMI · ${bmi.status}</span>
         </div>
         <div style="flex:1">
-          <p class="muted">身高 ${profile.height} cm · 体重 ${profile.weight} kg · 目标 ${profile.targetWeight} kg</p>
-          <p class="muted" style="margin-top:4px">距离目标还差 ${Math.abs(+(profile.weight - profile.targetWeight).toFixed(1))} kg，${profile.weight > profile.targetWeight ? '坚持控糖+有氧' : '加强力量+蛋白质'} 💪</p>
+          <p class="muted">身高 ${profile.height} cm · 体重 ${fmtWeight(profile.weight)} kg · 目标 ${fmtWeight(profile.targetWeight)} kg</p>
+          <p class="muted" style="margin-top:4px">距离目标还差 ${fmtWeight(Math.abs(profile.weight - profile.targetWeight))} kg，${profile.weight > profile.targetWeight ? '坚持控糖+有氧' : '加强力量+蛋白质'} 💪</p>
         </div>
       </div>
       <div class="bmi-row" id="rowAge"><span class="bl">年龄</span><span class="bv">${profile.age} 岁</span></div>
       <div class="bmi-row" id="rowH"><span class="bl">身高</span><span class="bv">${profile.height} cm</span></div>
-      <div class="bmi-row" id="rowW"><span class="bl">体重</span><span class="bv">${profile.weight} kg · 点击更新曲线</span></div>
-      <div class="bmi-row" id="rowTW"><span class="bl">目标体重</span><span class="bv">${profile.targetWeight} kg</span></div>
+      <div class="bmi-row" id="rowW"><span class="bl">体重</span><span class="bv">${fmtWeight(profile.weight)} kg · 点击更新曲线</span></div>
+      <div class="bmi-row" id="rowTW"><span class="bl">目标体重</span><span class="bv">${fmtWeight(profile.targetWeight)} kg</span></div>
     </div>
     <div class="card">
       <h3>体重 · 饮食趋势（近 14 天）</h3>
@@ -1236,7 +1285,7 @@ function renderMine() {
     </div>
     <div class="card">
       <h3>关于轻练</h3>
-      <p class="muted">轻练 · 合理健身网站版 v1.8.0</p>
+      <p class="muted">轻练 · 合理健身网站版 v1.9.0</p>
       <p class="muted" style="margin-top:4px">数据默认保存在本机浏览器；登录账号后可云同步到服务器，随时换设备恢复。</p>
     </div>
     </div>

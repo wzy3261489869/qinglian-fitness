@@ -198,10 +198,10 @@
         <span class="tt-plan">${esc(plan.title)}</span>
       </div>
       <div class="tt-meta">
-        <span><b>${day.e.length}</b> 个动作</span>
-        <span><b>${est.min}</b> 预计分钟</span>
-        <span><b>${est.kcal}</b> 消耗千卡</span>
-      </div>
+          <span class="ttm"><b>${day.e.length}</b><i>个动作</i></span>
+          <span class="ttm"><b>${est.min}</b><i>分钟</i></span>
+          <span class="ttm"><b>${grp(est.kcal)}</b><i>千卡</i></span>
+        </div>
       <button class="tt-start" data-tp="tp-start" data-id="${plan.id}">▶ 开始今日训练</button>
     </div>`;
   }

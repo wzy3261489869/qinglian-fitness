@@ -87,8 +87,8 @@
     }).join('')).join('');
     return `
       <div class="hm-summary">
-        <span><b>${activeDays}</b> 近一年活跃天</span>
-        <span><b>${totalMin}</b> 累计分钟</span>
+        <span><b>${activeDays ? grp(activeDays) : '--'}</b> 近一年活跃天</span>
+        <span><b>${totalMin ? grp(totalMin) : '--'}</b> 累计分钟</span>
       </div>
       <div class="hm-scroll" id="hmScroll">
         <div class="hm-inner">

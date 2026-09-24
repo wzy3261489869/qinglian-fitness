@@ -15,6 +15,10 @@
   --grad-accent: linear-gradient(135deg, #ff9a2e 0%, #ff7d00 100%);
   --shadow: 0 2px 12px rgba(0, 0, 0, .06);
   --radius: 16px;
+  --card-line: rgba(0, 0, 0, .055);
+  --m-label: #8e8e93;
+  --up: #10a066;
+  --down: #f5222d;
 }
 * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html { -webkit-text-size-adjust: 100%; }
@@ -289,7 +293,6 @@ img { display: block; }
 
 /* PC 上保持手机形态 */
 @media (min-width: 768px) {
-  body { background: linear-gradient(135deg, #e8f5ee 0%, #f0f5ff 50%, #fff5e8 100%); }
   #app, #tabbar, .subpage { box-shadow: 0 0 40px rgba(0, 0, 0, .1); }
   #tabbar { border-radius: 0; }
 }
@@ -302,35 +305,39 @@ img { display: block; }
   --primary-light: #5dd9b0;
   --primary-dark: #2bb583;
   --accent: #ff9a2e;
-  --bg-page: #0f1115;
-  --bg-card: #1a1d24;
-  --text-1: #e8eaed;
-  --text-2: #a8b0bd;
-  --text-3: #8b93a1;
-  --divider: #262a32;
-  --border: #2a2f38;
+  --bg-page: #000000;
+  --bg-card: #1c1c1e;
+  --text-1: #f5f5f7;
+  --text-2: #aeaeb2;
+  --text-3: #8e8e93;
+  --divider: rgba(255, 255, 255, .08);
+  --border: rgba(255, 255, 255, .06);
+  --card-line: rgba(255, 255, 255, .05);
   --grad: linear-gradient(135deg, #00b578 0%, #36c99a 100%);
   --grad-accent: linear-gradient(135deg, #ff9a2e 0%, #ff7d00 100%);
-  --shadow: 0 2px 12px rgba(0, 0, 0, .4);
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3);
+  --m-label: #8e8e93;
+  --up: #30d158;
+  --down: #ff453a;
   --radius: 16px;
   color-scheme: dark;
 }
-:root[data-theme="dark"] body { background: #0f1115; }
+:root[data-theme="dark"] body { background: #000000; }
 :root[data-theme="dark"] .cal .d.today { background: rgba(54, 201, 154, .15); color: var(--primary); }
-:root[data-theme="dark"] .subpage .sp-head { background: rgba(15, 17, 21, .96); }
+:root[data-theme="dark"] .subpage .sp-head { background: rgba(28, 28, 30, .96); border-bottom: 1px solid var(--card-line); }
 :root[data-theme="dark"] .tips { background: rgba(255, 125, 0, .12); }
 :root[data-theme="dark"] .tips p { color: #ffb368; }
-:root[data-theme="dark"] .stepper button { background: #262a32; color: var(--primary); }
-:root[data-theme="dark"] .btn.ghost { background: #262a32; color: var(--primary); }
+:root[data-theme="dark"] .stepper button { background: #2c2c2e; color: var(--primary); }
+:root[data-theme="dark"] .btn.ghost { background: #2c2c2e; color: var(--primary); }
 :root[data-theme="dark"] .meal .plus { background: #262a32; }
 :root[data-theme="dark"] .search { background: var(--bg-card); }
 :root[data-theme="dark"] .badge { background: #14171c; }
 :root[data-theme="dark"] #toast { background: rgba(50, 54, 62, .95); }
-:root[data-theme="dark"] #tabbar { background: rgba(26, 29, 36, .97); }
-:root[data-theme="dark"] #faDone { background: rgba(26, 29, 36, .97) !important; }
+:root[data-theme="dark"] #tabbar { background: rgba(28, 28, 30, .97); }
+:root[data-theme="dark"] #faDone { background: rgba(28, 28, 30, .97) !important; }
 
 @media (min-width: 768px) {
-  :root[data-theme="dark"] body { background: linear-gradient(135deg, #0a0c10 0%, #0f1320 50%, #100f0a 100%); }
+  :root[data-theme="dark"] body { background: #000000; }
   :root[data-theme="dark"] #app, :root[data-theme="dark"] #tabbar, :root[data-theme="dark"] .subpage { box-shadow: 0 0 40px rgba(0, 0, 0, .5); }
 }
 
@@ -407,7 +414,7 @@ body, .card, #tabbar, .subpage .sp-head { transition: background-color .25s, bor
   padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
   background: linear-gradient(to top, var(--bg-card) 62%, rgba(255, 255, 255, 0));
 }
-:root[data-theme="dark"] .wk-foot { background: linear-gradient(to top, var(--bg-page) 62%, rgba(15, 17, 21, 0)); }
+:root[data-theme="dark"] .wk-foot { background: linear-gradient(to top, var(--bg-page) 62%, rgba(0, 0, 0, 0)); }
 .btn.mega {
   width: 100%; height: 64px; border-radius: 18px;
   font-size: 19px; font-weight: 700; letter-spacing: .5px;
@@ -1435,4 +1442,99 @@ body {
 
   /* 饮食视图：单栏居中，避免过宽 */
   body[data-tab="stats"][data-rv="diet"] #app { max-width: 780px; }
+}
+
+/* =====================================================================
+   v1.9.0 · 专业数据展示系统
+   tabular-nums 等宽数字 / metric 指标卡 / 微妙内描边 / 绿涨红跌
+   ===================================================================== */
+
+/* 全站数字等宽对齐，避免多位数字跳动 */
+body { font-variant-numeric: tabular-nums; }
+
+/* 数据卡片：弱阴影 + 1px 微妙内描边 */
+.card {
+  box-shadow: none;
+  border: 1px solid var(--card-line);
+}
+
+/* ---------- metric 统一指标卡 ---------- */
+.metric {
+  background: var(--bg-card);
+  border: 1px solid var(--card-line);
+  border-radius: 14px;
+  padding: 16px;
+  display: flex; flex-direction: column;
+  min-width: 0;
+}
+/* 顶部：指标名 13px 灰阶（固定行高，保证数值基线对齐） */
+.m-label {
+  height: 18px; line-height: 18px;
+  font-size: 13px; color: var(--m-label);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* 中部：数值行（固定高度，所有并列卡基线一致） */
+.m-value {
+  display: flex; align-items: baseline;
+  height: 34px; margin-top: 6px; min-width: 0;
+}
+.m-num {
+  font-size: 26px; font-weight: 700; line-height: 34px;
+  color: var(--text-1); letter-spacing: -.4px;
+}
+.m-unit {
+  margin-left: 3px; font-size: 13px; font-weight: 400;
+  color: var(--text-1); opacity: .6;
+}
+.m-num.no-data { color: var(--m-label); font-weight: 600; letter-spacing: 0; }
+/* 底部：对比信息 10px（空内容也占位，固定行高） */
+.m-delta {
+  min-height: 14px; margin-top: 4px;
+  font-size: 10px; line-height: 14px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.md-up { color: var(--up); font-weight: 600; }
+.md-down { color: var(--down); font-weight: 600; }
+.md-flat { color: var(--m-label); }
+/* 连续打卡数字保留热度色 */
+.m-hot .m-num { color: var(--accent); }
+
+/* ---------- 指标卡栅格（间距统一 12px） ---------- */
+.grid-stats {
+  display: grid; gap: 12px; margin-top: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.grid-stats.gs2x2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.streak-row {
+  display: grid; gap: 12px; margin-top: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+/* 三列窄卡数值 24px，仍在 24-32 层级区间 */
+.grid-stats .m-num { font-size: 24px; }
+
+/* ---------- hero 大卡：数值/单位层级 ---------- */
+.hero .big { font-size: 32px; font-weight: 700; }
+.hero .big small { font-size: 13px; font-weight: 400; opacity: .6; }
+.hero .big .no-data { opacity: .6; font-weight: 600; }
+
+/* ---------- 最近记录千卡 ---------- */
+.rec-kcal {
+  color: var(--accent); font-size: 13px; font-weight: 600;
+  white-space: nowrap; flex-shrink: 0;
+}
+
+/* ---------- 今日训练 mini 指标：单位弱化 ---------- */
+.tp-today .tt-meta i {
+  font-style: normal; font-size: 10px; opacity: .75; letter-spacing: .2px;
+}
+
+/* ---------- 趋势图 SVG 轴数字等宽 ---------- */
+.trend-svg text { font-variant-numeric: tabular-nums; }
+
+/* ---------- PC ≥1024：宽屏下数值可更大 ---------- */
+@media (min-width: 1024px) {
+  .grid-stats .m-num,
+  .streak-row .m-num { font-size: 28px; }
+  /* 首页右侧窄栏 2×2 卡保持 26px */
+  .grid-stats.gs2x2 .m-num { font-size: 26px; }
 }
