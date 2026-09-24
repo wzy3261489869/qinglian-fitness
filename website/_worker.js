@@ -13,24 +13,28 @@ function getSql(env) {
   return _sql;
 }
 
-// Neon serverless 在数据库休眠（auto-suspend）后首次请求常返回 HTTP 520/522 或连接超时。
-// 用 Proxy 包装 sql 函数，让所有查询在遇到连接类错误时自动重试（1s/2s/4s），对上层透明。
+// Neon serverless 查询走 HTTPS fetch，但 Workers 出站 fetch 默认无超时：
+// 一旦连接挂起会拖到分钟级，前端 20 秒超时必然触发。因此：
+// 1) 每次查询用 Promise.race 包 6 秒硬超时；2) 失败后重试 1 次（间隔 1s）。
+// 最坏路径 6+1+6=13s，仍小于前端 20s，用户可拿到明确的成功/失败结果。
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-function isConnErr(e) {
-  const m = String((e && e.message) || e || '');
-  return /520|522|524|timeout|timed out|connect|fetch|network|ECONNRESET|ENOTFOUND|terminating/i.test(m);
+const QUERY_TIMEOUT = 6000;
+function withTimeout(promise) {
+  return Promise.race([
+    promise,
+    sleep(QUERY_TIMEOUT).then(() => { throw new Error('database query timeout'); })
+  ]);
 }
 async function dbRetry(fn) {
-  let err;
-  for (let i = 0; i <= 3; i++) {
-    try { return await fn(); }
-    catch (e) {
-      err = e;
-      if (!isConnErr(e) || i === 3) throw e;
-      await sleep(1000 * (i + 1)); // 1s, 2s, 3s
-    }
+  try {
+    return await withTimeout(fn());
+  } catch (e) {
+    const m = String((e && e.message) || e || '');
+    const isConnErr = /timeout|timed out|connect|fetch|network|520|522|524|ECONNRESET|ENOTFOUND|terminating/i.test(m);
+    if (!isConnErr) throw e;
+    await sleep(1000);
+    return withTimeout(fn());
   }
-  throw err;
 }
 function wrapRetry(rawSql) {
   return new Proxy(rawSql, {
@@ -137,7 +141,14 @@ app.put('/api/data', async (c) => {
   } catch (e) { return c.json({ ok: false, msg: '服务器错误', err: String(e && e.message || e) }); }
 });
 
-app.get('/api/health', (c) => c.json({ ok: true, name: 'qinglian-backend', mode: c.env.DATABASE_URL ? 'postgres' : 'file', time: Date.now() }));
+app.get('/api/health', (c) => {
+  // 异步 ping 数据库预热（不阻塞响应）：任何 health 探测都会顺带唤醒 Neon，减少冷启动
+  const sql = getSql(c.env);
+  if (sql && c.executionCtx && c.executionCtx.waitUntil) {
+    c.executionCtx.waitUntil(sql`SELECT 1`.catch(() => {}));
+  }
+  return c.json({ ok: true, name: 'qinglian-backend', mode: c.env.DATABASE_URL ? 'postgres' : 'file', time: Date.now() });
+});
 
 // ---------- 静态资源：非 /api 路由交给 ASSETS ----------
 app.all('*', (c) => c.env.ASSETS.fetch(c.req.raw));
