@@ -63,7 +63,7 @@
           <span class="dmd-btn" data-dm="date-prev">‹</span>
           <b>${viewDate === todayStr() ? '今天 · ' + viewDate : viewDate}</b>
           <span class="dmd-btn" data-dm="date-next">›</span>
-          ${isToday ? '' : '<span class="chip" data-dm="date-today" style="margin-left:6px">回到今天</span>'}
+          ${isToday ? '' : '<span class="chip" data-dm="date-today" style="margin-left:8px">回到今天</span>'}
         </div>
       </div>
       ${recordsSegHTML()}
@@ -83,7 +83,7 @@
       <div class="card dm-budget-row">
         <span class="dm-cfg" data-dm="open-target">⚙️ 目标设置</span>
         <span style="flex:1;text-align:right;font-size:13px;color:var(--text-2)">${remaining >= 0 ? '还可摄入' : '已超量'}</span>
-        <b style="color:${remaining >= 0 ? 'var(--primary-dark)' : '#f53f3f'};margin-left:8px">${Math.abs(remaining)} 千卡</b>
+        <b style="color:${remaining >= 0 ? 'var(--primary-dark)' : 'var(--danger)'};margin-left:8px">${Math.abs(remaining)} 千卡</b>
       </div>
       <div class="card">
         <h3>三大营养素</h3>
@@ -119,7 +119,7 @@
                 <span class="en">${esc(e.foodName)} <em>${e.grams != null ? e.grams + 'g' : '×' + e.servings + '份'}</em></span>
                 <span class="ek">${Math.round(e.kcal * (e.grams != null ? e.grams / 100 : e.servings))} 千卡</span>
                 <span class="del" data-dm="del" data-id="${e.id}">删除</span>
-              </div>`).join('') : `<p class="muted" style="padding:6px 0 0 4px">点击 ＋ 记录${m}</p>`}
+              </div>`).join('') : `<p class="muted" style="padding:8px 0 0 4px">点击 ＋ 记录${m}</p>`}
           </div>`;
         }).join('')}
       </div>
@@ -324,9 +324,9 @@
     });
     const plan = calcPlan(profile);
     if (!wPts.length) {
-      box.innerHTML = `<div class="empty" style="padding:18px"><i>⚖️</i>
+      box.innerHTML = `<div class="empty" style="padding:16px"><i>⚖️</i>
         还没有体重记录，先记一条吧
-        <div style="margin-top:10px"><button class="btn mega" data-dm="open-weight">记录今日体重</button></div>
+        <div style="margin-top:12px"><button class="btn mega" data-dm="open-weight">记录今日体重</button></div>
       </div>`;
       return;
     }
@@ -392,7 +392,7 @@
         ${zones}
       </svg>
       </div>
-      <button class="btn ghost full" data-dm="open-weight" style="height:38px;margin-top:6px">⚖️ 记录今日体重</button>`;
+      <button class="btn ghost full" data-dm="open-weight" style="height:40px;margin-top:8px">⚖️ 记录今日体重</button>`;
     ChartTip.bind(document.getElementById('trendHost'), i => ({
       date: days[i],
       rows: [

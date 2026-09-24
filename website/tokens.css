@@ -1,0 +1,128 @@
+/* ============================================================
+   轻练 · 设计规范 Design Tokens（v2.1.0 唯一真源）
+   所有页面/组件只能引用此文件定义的变量，禁止自造数值
+   ------------------------------------------------------------
+   间距 Spacing：4px 基数
+   色彩 Color：品牌色 / 中性色四档 / 语义色（成功·警告·错误·信息）
+   圆角 Radius：卡片 12 · 按钮/输入 8 · 胶囊 999
+   字体 Type：页面标题 / 模块标题 / 正文 / 辅助说明（数据数字独立）
+   动效 Motion：150 / 200 / 300ms
+   ============================================================ */
+:root {
+  /* ---------- 间距（8/12/16/24 内边距；16/24/32 模块间距） ---------- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+
+  /* ---------- 品牌色（仅主按钮/选中态/关键数据，禁止大面积铺色） ---------- */
+  --primary: #00b578;
+  --primary-light: #36c99a;
+  --primary-dark: #00905f;
+  --grad: linear-gradient(135deg, #00b578 0%, #36c99a 100%);
+  --grad-accent: linear-gradient(135deg, #ff9a2e 0%, #ff7d00 100%);
+
+  /* ---------- 语义色 ---------- */
+  --success: #10a066;
+  --warning: #ff7d00;
+  --danger: #f5222d;
+  --info: #165dff;
+
+  /* ---------- 中性色：背景 / 描边 / 文字四档（浅色） ---------- */
+  --bg-page: #f5f8f6;
+  --bg-card: #ffffff;
+  --bg-elevated: #f0f3f1;
+  --border: #e8edea;
+  --divider: rgba(0, 0, 0, .08);
+  --card-line: rgba(0, 0, 0, .05);
+  --chart-grid: rgba(0, 0, 0, .1);
+  --text-1: #1d2129;
+  --text-2: #4e5969;
+  --text-3: #8e8e93;
+  --text-4: #c9cdd4;
+
+  /* ---------- 圆角：同层级必须一致 ---------- */
+  --r-card: 12px;
+  --r-control: 8px;
+  --r-pill: 999px;
+
+  /* ---------- 字体层级（仅 4 级） ---------- */
+  --fs-title: 22px;
+  --fs-section: 17px;
+  --fs-body: 15px;
+  --fs-caption: 13px;
+  /* 数据展示数字（独立于 4 级文字体系，沿用 v1.9.0） */
+  --fs-stat-lg: 32px;
+  --fs-stat: 26px;
+  --fs-stat-sm: 24px;
+  /* 图表注释（SVG 内，独立） */
+  --fs-chart-label: 11px;
+  /* 字重 */
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semi: 600;
+  --fw-bold: 700;
+
+  /* ---------- 阴影 ---------- */
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, .04);
+  --shadow-pop: 0 6px 20px rgba(0, 0, 0, .12);
+
+  /* ---------- 动效 ---------- */
+  --t-fast: .15s;
+  --t-base: .2s;
+  --t-slow: .3s;
+  --ease: cubic-bezier(.4, 0, .2, 1);
+  /* 输入聚焦光晕 */
+  --focus-glow: 0 0 0 3px rgba(0, 181, 120, .16);
+
+  /* ============================================================
+     旧变量别名（让存量样式平滑映射到新规范，勿新增使用）
+     ============================================================ */
+  --accent: var(--warning);
+  --radius: var(--r-card);
+  --m-label: var(--text-3);
+  --up: var(--success);
+  --down: var(--danger);
+  --hairline: var(--divider);
+  --shadow: var(--shadow-card);
+}
+
+/* ============================================================
+   深色主题：仅覆盖需要变化的 token
+   ============================================================ */
+:root[data-theme="dark"] {
+  /* 品牌色提亮 */
+  --primary: #36c99a;
+  --primary-light: #5dd9b0;
+  --primary-dark: #2bb583;
+
+  /* 语义色 */
+  --success: #30d158;
+  --warning: #ff9a2e;
+  --danger: #ff453a;
+  --info: #5e9bff;
+
+  /* 中性色 */
+  --bg-page: #000000;
+  --bg-card: #1c1c1e;
+  --bg-elevated: #2c2c2e;
+  --border: rgba(255, 255, 255, .08);
+  --divider: rgba(255, 255, 255, .08);
+  --card-line: rgba(255, 255, 255, .05);
+  --chart-grid: rgba(255, 255, 255, .1);
+  --text-1: #f5f5f7;
+  --text-2: #aeaeb2;
+  --text-3: #8e8e93;
+  --text-4: #48484a;
+
+  /* 阴影 */
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, .3);
+  --shadow-pop: 0 6px 20px rgba(0, 0, 0, .55);
+
+  /* 聚焦光晕 */
+  --focus-glow: 0 0 0 3px rgba(54, 201, 154, .22);
+
+  color-scheme: dark;
+}

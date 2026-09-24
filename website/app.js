@@ -391,10 +391,10 @@ const skeletonLine = (w, h, extra) =>
 function bootSkeletonHTML() {
   return `<div class="boot-skel">
     <div class="skeleton" style="width:46%;height:26px"></div>
-    <div class="skeleton" style="width:70%;height:12px;margin-top:10px"></div>
-    <div class="skeleton" style="width:100%;height:150px;margin-top:18px;border-radius:20px"></div>
-    <div class="skeleton" style="width:100%;height:84px;margin-top:12px;border-radius:16px"></div>
-    <div class="skeleton" style="width:100%;height:84px;margin-top:12px;border-radius:16px"></div>
+    <div class="skeleton" style="width:70%;height:12px;margin-top:12px"></div>
+    <div class="skeleton" style="width:100%;height:150px;margin-top:16px;border-radius:12px"></div>
+    <div class="skeleton" style="width:100%;height:84px;margin-top:12px;border-radius:12px"></div>
+    <div class="skeleton" style="width:100%;height:84px;margin-top:12px;border-radius:12px"></div>
   </div>`;
 }
 function libSkeletonCards(n) {
@@ -404,7 +404,7 @@ function libSkeletonCards(n) {
       <span class="skeleton" style="width:100%;height:150px;border-radius:0"></span>
       <span class="sk-body">
         <span class="skeleton" style="width:70%;height:13px"></span>
-        <span class="skeleton" style="width:44%;height:11px;margin-top:9px"></span>
+        <span class="skeleton" style="width:44%;height:11px;margin-top:8px"></span>
       </span>
     </div>`;
   }
@@ -414,7 +414,7 @@ function foodSkeletonRows(n) {
   let s = '';
   for (let i = 0; i < n; i++) {
     s += `<div class="dm-food-row sk-food" aria-hidden="true">
-      <span class="skeleton" style="width:38px;height:38px;border-radius:10px"></span>
+      <span class="skeleton" style="width:38px;height:40px;border-radius:10px"></span>
       <span style="flex:1">
         <span class="skeleton" style="width:62%;height:13px;display:block"></span>
         <span class="skeleton" style="width:38%;height:11px;margin-top:8px;display:block"></span>
@@ -573,7 +573,7 @@ function runCountUps(scopeEl) {
     const group = el.dataset.group != null;
     const out = v => decimals ? v.toFixed(decimals) : (group ? grp(v) : String(Math.round(v)));
     if (reduced) { el.textContent = out(to); return; }
-    const dur = 750, t0 = performance.now();
+    const dur = 220, t0 = performance.now();
     function step(t) {
       const p = Math.min(1, (t - t0) / dur);
       const eased = 1 - Math.pow(1 - p, 3);
@@ -830,7 +830,7 @@ function openWorkout(planId, saved) {
         <div class="card">
           <h3>动作清单 <span class="muted" id="exCount">0/${p.exercises.length}</span></h3>
           <div class="progress-mini"><i id="exBar" style="width:0%"></i></div>
-          <div class="ex-list" style="margin-top:10px">
+          <div class="ex-list" style="margin-top:12px">
             ${p.exercises.map((n, i) => {
               const ex = EXERCISES.find(e => e.name === n) || { minutes: 4, kcal: 30 };
               const thumb = thumbFor(n);
@@ -1333,14 +1333,14 @@ function renderMine() {
       <img src="${cover(64)}" alt="头像"/>
       <div>
         <div class="pn">${esc(profile.nickname)}</div>
-        <div class="pg">${goalTag(profile.goal)} <span style="margin-left:6px">${esc(profile.gender)} · ${profile.age} 岁</span></div>
+        <div class="pg">${goalTag(profile.goal)} <span style="margin-left:8px">${esc(profile.gender)} · ${profile.age} 岁</span></div>
       </div>
       <button class="edit-btn" id="editNick">编辑</button>
     </div>
     <div class="mine-col mine-col-l">
     <div class="card">
       <h3>身体数据</h3>
-      <div class="bmi-visual" style="margin-bottom:6px">
+      <div class="bmi-visual" style="margin-bottom:8px">
         <div class="bmi-num" style="background:${bmi.color}22;color:${bmi.color}">
           <b>${bmi.v.toFixed(1)}</b><span>BMI · ${bmi.status}</span>
         </div>
@@ -1363,12 +1363,12 @@ function renderMine() {
     <div class="card">
       <h3>健身目标</h3>
       <div class="goal-opts">${GOALS.map(g => `<span class="chip ${profile.goal === g ? 'active' : ''}" data-goal="${g}">${g}</span>`).join('')}</div>
-      <p class="muted" style="margin-top:10px">${esc(GOAL_TIPS[profile.goal])}</p>
+      <p class="muted" style="margin-top:12px">${esc(GOAL_TIPS[profile.goal])}</p>
     </div>
     <div class="card">
       <h3>外观设置</h3>
       <div class="goal-opts">${['auto', 'light', 'dark'].map(t => `<span class="chip ${theme === t ? 'active' : ''}" data-theme="${t}">${t === 'auto' ? '🌓' : t === 'dark' ? '🌙' : '☀️'} ${THEME_LABELS[t]}</span>`).join('')}</div>
-      <p class="muted" style="margin-top:10px">当前：${theme === 'auto' ? (systemDark() ? '跟随系统（深色）' : '跟随系统（浅色）') : THEME_LABELS[theme]}</p>
+      <p class="muted" style="margin-top:12px">当前：${theme === 'auto' ? (systemDark() ? '跟随系统（深色）' : '跟随系统（浅色）') : THEME_LABELS[theme]}</p>
     </div>
     <div class="card">
       <h3>训练偏好</h3>
@@ -1390,18 +1390,18 @@ function renderMine() {
       <div class="set-row"><span>🔍 字体大小</span>
         <span class="seg">${['normal', 'large', 'xlarge'].map(f => `<span class="seg-i ${settings.fs === f ? 'on' : ''}" data-set="fs" data-v="${f}">${f === 'normal' ? '标准' : f === 'large' ? '大' : '超大'}</span>`).join('')}</span>
       </div>
-      <p class="muted" style="margin-top:10px;line-height:1.6">首次训练点「开始」即激活声音；浏览器询问通知权限时点「允许」，锁屏时休息结束也能收到提醒。</p>
+      <p class="muted" style="margin-top:12px;line-height:1.6">首次训练点「开始」即激活声音；浏览器询问通知权限时点「允许」，锁屏时休息结束也能收到提醒。</p>
     </div>
     <div class="card">
       <h3>账号与云同步</h3>
       ${auth.token ? `
-        <p style="margin:4px 0 10px">👤 <b>${esc(auth.username)}</b> <span class="muted">· 已登录</span></p>
+        <p style="margin:4px 0 12px">👤 <b>${esc(auth.username)}</b> <span class="muted">· 已登录</span></p>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <span class="chip" id="cloudUploadBtn">☁️ 上传到云端</span>
           <span class="chip" id="cloudDownloadBtn">⬇️ 从云端恢复</span>
           <span class="chip" id="btnOut">退出登录</span>
         </div>
-        <p class="muted" style="margin-top:10px">训练记录、饮食数据、身体档案将同步到服务器，换设备登录同一账号即可恢复。</p>
+        <p class="muted" style="margin-top:12px">训练记录、饮食数据、身体档案将同步到服务器，换设备登录同一账号即可恢复。</p>
       ` : `
           <input id="authUser" class="field-input" placeholder="用户名（3-20位字母数字）"
             autocomplete="username" autocapitalize="none" spellcheck="false"/>
@@ -1413,7 +1413,7 @@ function renderMine() {
             <span class="chip" id="authBtn" style="flex:1;justify-content:center">登录</span>
             <span class="chip" id="authBtnReg" style="flex:1;justify-content:center">注册新账号</span>
           </div>
-          <p class="muted" style="margin-top:10px">注册后数据可云同步：换手机、换浏览器登录同一账号即可恢复全部记录。</p>
+          <p class="muted" style="margin-top:12px">注册后数据可云同步：换手机、换浏览器登录同一账号即可恢复全部记录。</p>
         `}
     </div>
     <div class="card"><h3>我的成就</h3>
@@ -1421,7 +1421,7 @@ function renderMine() {
     </div>
     <div class="card">
       <h3>关于轻练</h3>
-      <p class="muted">轻练 · 合理健身网站版 v2.0.0</p>
+      <p class="muted">轻练 · 合理健身网站版 v2.1.0</p>
       <p class="muted" style="margin-top:4px">数据默认保存在本机浏览器；登录账号后可云同步到服务器，随时换设备恢复。</p>
     </div>
     </div>
