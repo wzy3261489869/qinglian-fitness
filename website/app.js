@@ -1591,7 +1591,9 @@ async function gateAuth(mode) {
   primary.disabled = secondary.disabled = true;
   primary.classList.add('loading');
   hideGateError();
-  const r = await api('POST', mode === 'reg' ? '/api/register' : '/api/login', { username: u, password: p }, 20000);
+  // 32s：后端对数据库查询有 8s×3 次重试（首连 Cloudflare→Neon 链路需 10-20s 激活），
+  // 前端超时必须大于后端最坏路径 26s，否则用户拿不到重试成功的结果
+  const r = await api('POST', mode === 'reg' ? '/api/register' : '/api/login', { username: u, password: p }, 32000);
   primary.classList.remove('loading');
   primary.disabled = secondary.disabled = false;
   if (r.ok) {

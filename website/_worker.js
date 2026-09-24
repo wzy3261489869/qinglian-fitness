@@ -13,11 +13,10 @@ function getSql(env) {
   return _sql;
 }
 
-// Neon serverless 查询走 HTTPS fetch，但 Workers 出站 fetch 默认无超时：
-// 一旦连接挂起会拖到分钟级，前端 20 秒超时必然触发。因此：
-// 1) 每次查询用 Promise.race 包 8 秒硬超时（首连 TLS 握手实测需 6s+）；
-// 2) 失败后重试 1 次（间隔 1s）。最坏路径 8+1+8=17s，仍小于前端 20s，
-// 用户可拿到明确的成功/失败结果；配合前端进登录页时的 health 预热，正常一次成功。
+// Neon serverless 查询走 HTTPS fetch，但 Workers 出站 fetch 默认无超时，
+// 且每个新 Worker 实例首连 Cloudflare→Neon 链路实测需 10-20 秒激活（激活后毫秒级）。
+// 策略：每次查询 8s 硬超时，失败最多重试 2 次（间隔 1s）——首轮激活链路，后续成功。
+// 最坏路径 8+1+8+1+8=26s，前端登录超时已放宽到 32s，保证用户能等到成功结果。
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const QUERY_TIMEOUT = 8000;
 function withTimeout(promise) {
@@ -27,15 +26,19 @@ function withTimeout(promise) {
   ]);
 }
 async function dbRetry(fn) {
-  try {
-    return await withTimeout(fn());
-  } catch (e) {
-    const m = String((e && e.message) || e || '');
-    const isConnErr = /timeout|timed out|connect|fetch|network|520|522|524|ECONNRESET|ENOTFOUND|terminating/i.test(m);
-    if (!isConnErr) throw e;
-    await sleep(1000);
-    return withTimeout(fn());
+  let err;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      return await withTimeout(fn());
+    } catch (e) {
+      err = e;
+      const m = String((e && e.message) || e || '');
+      const isConnErr = /timeout|timed out|connect|fetch|network|520|522|524|ECONNRESET|ENOTFOUND|terminating/i.test(m);
+      if (!isConnErr || attempt === 2) throw e;
+      await sleep(1000);
+    }
   }
+  throw err;
 }
 function wrapRetry(rawSql) {
   return new Proxy(rawSql, {

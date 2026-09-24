@@ -1,5 +1,5 @@
 /* 肌肉会飞 Service Worker：网络优先，离线回退缓存 + 休息结束通知兜底 */
-const CACHE = 'qinglian-v20';
+const CACHE = 'qinglian-v21';
 const ASSETS = ['./', './index.html', './tokens.css', './style.css', './app.js', './diet-module.js', './training-plans.js', './rewards-module.js', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './favicon-32.png', './exercises-lib.json', './foods-lib.json'];
 const restTimers = [];
 
