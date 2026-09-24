@@ -2,7 +2,7 @@
 // /api/* 交给 Hono 后端，其他路由返回静态资源（ASSETS）
 // 开启 nodejs_compat 保留 crypto.scryptSync/randomBytes，旧用户密码零迁移
 import { Hono } from 'hono';
-import { neon } from '@neondatabase/serverless';
+import { neon, Client } from '@neondatabase/serverless';
 import crypto from 'node:crypto';
 
 const app = new Hono();
@@ -143,6 +143,37 @@ app.put('/api/data', async (c) => {
               ON CONFLICT (username) DO UPDATE SET data=${dataStr}::jsonb, synced_at=${syncedAt}`;
     return c.json({ ok: true, syncedAt });
   } catch (e) { return c.json({ ok: false, msg: '服务器错误', err: String(e && e.message || e) }); }
+});
+
+// [debug] 链路诊断：对比 HTTPS(HTTP-mode) 与 WebSocket 两条通道到 Neon 的耗时
+app.get('/api/_nettest', async (c) => {
+  const out = { t: Date.now() };
+  // 1) HTTPS POST /sql（neon HTTP mode 底层）
+  {
+    const t0 = Date.now();
+    try {
+      const url = new URL(c.env.DATABASE_URL.replace(/^postgres/, 'https'));
+      const res = await fetch(url.origin + '/sql', {
+        method: 'POST',
+        headers: { 'Neon-Connection-String': c.env.DATABASE_URL },
+        body: JSON.stringify({ query: 'SELECT 1 AS ok' }),
+        signal: AbortSignal.timeout(8000)
+      });
+      out.https = { ms: Date.now() - t0, status: res.status, body: (await res.text()).slice(0, 120) };
+    } catch (e) { out.https = { ms: Date.now() - t0, err: String(e && e.message || e).slice(0, 120) }; }
+  }
+  // 2) WebSocket (neon Client /v2)
+  {
+    const t0 = Date.now();
+    try {
+      const client = new Client({ connectionString: c.env.DATABASE_URL, wsConstructor: WebSocket });
+      await client.connect();
+      const r = await client.query('SELECT 1 AS ok');
+      await client.end();
+      out.ws = { ms: Date.now() - t0, rows: r.rows };
+    } catch (e) { out.ws = { ms: Date.now() - t0, err: String(e && e.message || e).slice(0, 120) }; }
+  }
+  return c.json(out);
 });
 
 app.get('/api/health', (c) => {
