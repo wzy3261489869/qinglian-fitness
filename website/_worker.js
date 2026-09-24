@@ -15,10 +15,11 @@ function getSql(env) {
 
 // Neon serverless 查询走 HTTPS fetch，但 Workers 出站 fetch 默认无超时：
 // 一旦连接挂起会拖到分钟级，前端 20 秒超时必然触发。因此：
-// 1) 每次查询用 Promise.race 包 6 秒硬超时；2) 失败后重试 1 次（间隔 1s）。
-// 最坏路径 6+1+6=13s，仍小于前端 20s，用户可拿到明确的成功/失败结果。
+// 1) 每次查询用 Promise.race 包 8 秒硬超时（首连 TLS 握手实测需 6s+）；
+// 2) 失败后重试 1 次（间隔 1s）。最坏路径 8+1+8=17s，仍小于前端 20s，
+// 用户可拿到明确的成功/失败结果；配合前端进登录页时的 health 预热，正常一次成功。
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const QUERY_TIMEOUT = 6000;
+const QUERY_TIMEOUT = 8000;
 function withTimeout(promise) {
   return Promise.race([
     promise,

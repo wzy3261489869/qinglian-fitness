@@ -1536,6 +1536,12 @@ function showLoginGate() {
   $('#app').style.visibility = 'hidden';
   $('#tabbar').style.display = 'none';
   setGateMode('login');
+  // 预热：进登录页就 ping 一次数据库（后端 health 会异步 SELECT 1 唤醒 Neon），
+  // 用户填用户名密码的几秒钟里连接已焐热，首次登录不再冷启动超时
+  if (!gate._warmed) {
+    gate._warmed = true;
+    fetch('/api/health').catch(() => {});
+  }
   // 绑定事件（只绑一次）
   if (!gate._bound) {
     gate._bound = true;
