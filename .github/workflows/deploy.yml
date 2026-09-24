@@ -19,7 +19,7 @@ jobs:
         run: npm install --prefix backend
 
       - name: Install Netlify CLI
-        run: npm install -g netlify-cli
+        run: npm install -g netlify-cli@17.1.0
 
       - name: Deploy to Netlify
         env:
