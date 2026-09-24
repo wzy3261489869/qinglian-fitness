@@ -1,4 +1,4 @@
-/* 轻练 · 网站版核心逻辑（数据存 localStorage） */
+/* 肌肉会飞 · 网站版核心逻辑（数据存 localStorage） */
 'use strict';
 
 /* ================= 数据 ================= */
@@ -1420,8 +1420,8 @@ function renderMine() {
       <div class="badges">${badges.map(b => `<div class="badge ${b.on ? 'on' : ''}"><i>${b.icon}</i><span>${b.name}</span></div>`).join('')}</div>
     </div>
     <div class="card">
-      <h3>关于轻练</h3>
-      <p class="muted">轻练 · 合理健身网站版 v2.1.0</p>
+      <h3>关于肌肉会飞</h3>
+      <p class="muted">肌肉会飞 v3.0.0 · 科学训练与饮食记录</p>
       <p class="muted" style="margin-top:4px">数据默认保存在本机浏览器；登录账号后可云同步到服务器，随时换设备恢复。</p>
     </div>
     </div>

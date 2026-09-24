@@ -1,10 +1,63 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
   <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#00b578"/>
       <stop offset="1" stop-color="#36c99a"/>
     </linearGradient>
+    <linearGradient id="arm" gradientUnits="userSpaceOnUse" x1="150" y1="120" x2="320" y2="390">
+      <stop offset="0" stop-color="#f2fff9"/>
+      <stop offset=".55" stop-color="#c9f2e2"/>
+      <stop offset="1" stop-color="#9fe6cd"/>
+    </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="96" fill="url(#g)"/>
-  <text x="256" y="272" font-family="PingFang SC, Hiragino Sans GB, Microsoft YaHei, sans-serif" font-size="270" font-weight="700" fill="#ffffff" text-anchor="middle" dominant-baseline="central">轻</text>
+
+  <!-- 背景 -->
+  <rect width="512" height="512" rx="112" fill="url(#bg)"/>
+
+  <!-- 装饰：圆环 / 运动弧线 / 星点 -->
+  <circle cx="432" cy="80" r="56" fill="none" stroke="#ffffff" stroke-opacity=".14" stroke-width="7"/>
+  <circle cx="388" cy="48" r="9" fill="#ffffff" fill-opacity=".5"/>
+  <circle cx="64" cy="92" r="6" fill="#ffffff" fill-opacity=".35"/>
+  <path d="M44 402 Q120 326 202 344" fill="none" stroke="#ffffff" stroke-opacity=".18" stroke-width="7" stroke-linecap="round"/>
+  <path d="M86 448 l8 18 18 8 -18 8 -8 18 -8 -18 -18 -8 18 -8 Z" fill="#ffffff" fill-opacity=".85"/>
+
+  <!-- 左翅（4 片羽毛） -->
+  <g fill="#ffffff">
+    <path d="M218 246 C162 196 96 196 56 228 C104 246 162 262 214 260 Z" opacity=".98"/>
+    <path d="M212 260 C150 244 82 256 48 300 C102 298 156 284 210 276 Z" opacity=".92"/>
+    <path d="M214 280 C150 284 88 306 66 352 C116 336 162 312 212 296 Z" opacity=".86"/>
+    <path d="M222 294 C176 314 132 346 118 392 C158 364 196 334 224 310 Z" opacity=".8"/>
+  </g>
+  <!-- 右翅（镜像） -->
+  <g fill="#ffffff">
+    <path d="M294 246 C350 196 416 196 456 228 C408 246 350 262 298 260 Z" opacity=".98"/>
+    <path d="M300 260 C362 244 430 256 464 300 C410 298 356 284 302 276 Z" opacity=".92"/>
+    <path d="M298 280 C362 284 424 306 446 352 C396 336 350 312 300 296 Z" opacity=".86"/>
+    <path d="M290 294 C336 314 380 346 394 392 C354 364 316 334 288 310 Z" opacity=".8"/>
+  </g>
+
+  <!-- 手臂（flex 二头肌姿势）：底层深绿大件 = 外轮廓 -->
+  <g fill="#007a52" stroke="#007a52">
+    <circle cx="188" cy="348" r="45"/>
+    <line x1="196" y1="336" x2="276" y2="246" stroke-width="68" stroke-linecap="round"/>
+    <circle cx="248" cy="266" r="55"/>
+    <line x1="276" y1="246" x2="280" y2="172" stroke-width="64" stroke-linecap="round"/>
+    <rect x="240" y="114" width="80" height="66" rx="24"/>
+  </g>
+  <!-- 上层浅色小件 = 填充（内缩 5px，外形即连续描边） -->
+  <g fill="url(#arm)">
+    <circle cx="188" cy="348" r="40"/>
+    <line x1="196" y1="336" x2="276" y2="246" stroke-width="58" stroke="url(#arm)" stroke-linecap="round"/>
+    <circle cx="248" cy="266" r="50"/>
+    <line x1="276" y1="246" x2="280" y2="172" stroke-width="54" stroke="url(#arm)" stroke-linecap="round"/>
+    <rect x="245" y="119" width="70" height="56" rx="20"/>
+  </g>
+  <!-- 拳头手指线（弯曲的手指 = 横线） -->
+  <g stroke="#007a52" stroke-width="4" stroke-linecap="round" opacity=".45">
+    <line x1="256" y1="136" x2="304" y2="136"/>
+    <line x1="256" y1="150" x2="304" y2="150"/>
+  </g>
+  <!-- 高光：二头肌 + 拳头 -->
+  <ellipse cx="230" cy="242" rx="14" ry="22" fill="#ffffff" opacity=".5" transform="rotate(-28 230 242)"/>
+  <ellipse cx="263" cy="133" rx="9" ry="11" fill="#ffffff" opacity=".7"/>
 </svg>

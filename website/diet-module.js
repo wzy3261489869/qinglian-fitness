@@ -373,7 +373,7 @@
       <div class="trend-legend">
         <span><i style="background:#165dff"></i>体重（左轴 kg）</span>
         <span><i style="background:var(--primary)"></i>摄入（右轴 千卡）</span>
-        <span><i style="background:var(--accent)"></i>目标 ${plan.target}</span>
+        <span><i style="background:var(--warning)"></i>目标 ${plan.target}</span>
       </div>
       <div class="chart-host trend-host" id="trendHost">
       <svg viewBox="0 0 ${W} ${H}" class="trend-svg" role="img" aria-label="体重与饮食热量对比曲线">
@@ -384,7 +384,7 @@
         ${grid}${xlab}
         <path d="${area}" fill="url(#kfill)"/>
         <line x1="${L}" y1="${yK(plan.target)}" x2="${W - R}" y2="${yK(plan.target)}"
-          stroke="var(--accent)" stroke-width="1.2" stroke-dasharray="4 3"/>
+          stroke="var(--warning)" stroke-width="1.2" stroke-dasharray="4 3"/>
         <path d="${linePath(kPathPts)}" fill="none" stroke="var(--primary)" stroke-width="2"/>
         <path d="${linePath(wPathPts)}" fill="none" stroke="#165dff" stroke-width="2"/>
         ${dots(kPts, yK, 'var(--primary)', 'k')}

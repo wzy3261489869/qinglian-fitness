@@ -355,7 +355,7 @@
           <div class="tr-ring">
             <svg viewBox="0 0 120 120" width="120" height="120">
               <circle cx="60" cy="60" r="52" fill="none" stroke="var(--divider)" stroke-width="8"/>
-              <circle id="trArc" cx="60" cy="60" r="52" fill="none" stroke="var(--accent)" stroke-width="8"
+              <circle id="trArc" cx="60" cy="60" r="52" fill="none" stroke="var(--warning)" stroke-width="8"
                 stroke-linecap="round" transform="rotate(-90 60 60)"/>
             </svg>
             <div class="tr-num" id="trNum">00</div>

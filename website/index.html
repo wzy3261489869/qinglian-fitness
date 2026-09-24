@@ -2,15 +2,16 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#00b578" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#00b578" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#1c1c1e" media="(prefers-color-scheme: dark)" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="description" content="轻练 - 科学训练计划与饮食记录，助你合理健身" />
+  <meta name="description" content="肌肉会飞 - 科学训练计划与饮食记录，让肌肉飞起来" />
   <link rel="manifest" href="manifest.webmanifest" />
-  <link rel="icon" type="image/svg+xml" href="icon.svg" />
-  <link rel="apple-touch-icon" href="icon.svg" />
-  <title>轻练 · 合理健身</title>
+  <link rel="icon" type="image/png" href="favicon-32.png" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <title>肌肉会飞</title>
   <script>
     // 防止深色模式闪烁：在 CSS 加载前就应用主题
     (function() {
@@ -25,12 +26,18 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <noscript>
+    <div style="padding:32px 20px;text-align:center;font-family:sans-serif">
+      <h2 style="margin-bottom:12px">肌肉会飞</h2>
+      <p>本应用需要启用 JavaScript 才能运行，请在浏览器设置中开启后刷新页面。</p>
+    </div>
+  </noscript>
   <div id="loginGate" class="login-gate">
     <div class="lg-inner">
       <div class="lg-brand">
-        <div class="lg-logo">💪</div>
-        <h1>轻练</h1>
-        <p>合理健身 · 登录后开始使用</p>
+        <img class="lg-logo" src="icon-512.png" alt="肌肉会飞图标" width="76" height="76" />
+        <h1>肌肉会飞</h1>
+        <p>让肌肉飞起来 · 登录后开始使用</p>
       </div>
       <form class="lg-form" id="gateForm" autocomplete="on">
         <div class="lg-field">

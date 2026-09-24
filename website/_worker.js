@@ -1,4 +1,4 @@
-// 轻练健身 - Cloudflare Pages _worker.js（单文件 Functions）
+// 肌肉会飞 - Cloudflare Pages _worker.js（单文件 Functions）
 // /api/* 交给 Hono 后端，其他路由返回静态资源（ASSETS）
 // 开启 nodejs_compat 保留 crypto.scryptSync/randomBytes，旧用户密码零迁移
 import { Hono } from 'hono';
@@ -9,8 +9,33 @@ const app = new Hono();
 
 let _sql = null;
 function getSql(env) {
-  if (!_sql && env.DATABASE_URL) _sql = neon(env.DATABASE_URL);
+  if (!_sql && env.DATABASE_URL) _sql = wrapRetry(neon(env.DATABASE_URL));
   return _sql;
+}
+
+// Neon serverless 在数据库休眠（auto-suspend）后首次请求常返回 HTTP 520/522 或连接超时。
+// 用 Proxy 包装 sql 函数，让所有查询在遇到连接类错误时自动重试（1s/2s/4s），对上层透明。
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+function isConnErr(e) {
+  const m = String((e && e.message) || e || '');
+  return /520|522|524|timeout|timed out|connect|fetch|network|ECONNRESET|ENOTFOUND|terminating/i.test(m);
+}
+async function dbRetry(fn) {
+  let err;
+  for (let i = 0; i <= 3; i++) {
+    try { return await fn(); }
+    catch (e) {
+      err = e;
+      if (!isConnErr(e) || i === 3) throw e;
+      await sleep(1000 * (i + 1)); // 1s, 2s, 3s
+    }
+  }
+  throw err;
+}
+function wrapRetry(rawSql) {
+  return new Proxy(rawSql, {
+    apply(target, thisArg, args) { return dbRetry(() => Reflect.apply(target, thisArg, args)); }
+  });
 }
 
 async function ensureTables(sql) {

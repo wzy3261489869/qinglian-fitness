@@ -153,7 +153,7 @@
     ctx.fillStyle = '#fff';
     ctx.font = '800 34px ' + FONT;
     ctx.textBaseline = 'middle';
-    ctx.fillText('轻练', 60, 74);
+    ctx.fillText('肌肉会飞', 60, 74);
     ctx.font = '400 22px ' + FONT;
     ctx.globalAlpha = .85;
     const tag = '我的训练日报';
@@ -294,7 +294,7 @@
     $('#posterDownload').addEventListener('click', () => {
       if (!url) { toast('海报还在生成中'); return; }
       const a = document.createElement('a');
-      a.href = url; a.download = '轻练训练海报-' + date + '.png';
+      a.href = url; a.download = '肌肉会飞训练海报-' + date + '.png';
       document.body.appendChild(a); a.click(); a.remove();
       toast('海报已保存到下载，记得分享哦 🎉');
     });
@@ -458,7 +458,7 @@
       toast('提醒已开启 · 每日 ' + r.time);
     } else {
       r.on = false;
-      toast('提醒已关闭，想练随时打开轻练');
+      toast('提醒已关闭，想练随时打开肌肉会飞');
     }
     saveSettings();
     // 局部刷新开关样式，不重绘整页（避免输入框失焦问题）

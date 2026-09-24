@@ -1,6 +1,6 @@
-/* 轻练 Service Worker：网络优先，离线回退缓存 + 休息结束通知兜底 */
-const CACHE = 'qinglian-v18';
-const ASSETS = ['./', './index.html', './tokens.css', './style.css', './app.js', './diet-module.js', './training-plans.js', './rewards-module.js', './manifest.webmanifest', './icon.svg', './icon-512.png', './exercises-lib.json', './foods-lib.json'];
+/* 肌肉会飞 Service Worker：网络优先，离线回退缓存 + 休息结束通知兜底 */
+const CACHE = 'qinglian-v19';
+const ASSETS = ['./', './index.html', './tokens.css', './style.css', './app.js', './diet-module.js', './training-plans.js', './rewards-module.js', './manifest.webmanifest', './icon.svg', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './favicon-32.png', './exercises-lib.json', './foods-lib.json'];
 const restTimers = [];
 
 self.addEventListener('install', (e) => {
@@ -38,7 +38,7 @@ self.addEventListener('message', (e) => {
     restTimers.length = 0;
     const ms = Math.max(0, d.at - Date.now());
     const t = setTimeout(() => {
-      self.registration.showNotification('轻练 · 休息结束 💪', {
+      self.registration.showNotification('肌肉会飞 · 休息结束 💪', {
         body: '休息好了，开始下一组吧！',
         icon: './icon.svg',
         badge: './icon.svg',
