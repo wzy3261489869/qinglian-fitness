@@ -66,15 +66,16 @@
           ${isToday ? '' : '<span class="chip" data-dm="date-today" style="margin-left:6px">回到今天</span>'}
         </div>
       </div>
+      ${recordsSegHTML()}
       <div class="hero ${over ? 'over' : ''}">
         <div>
           <div class="label">今日已摄入</div>
-          <div class="big">${Math.round(nutri.kcal)}<small> 千卡</small></div>
+          <div class="big"><span data-count="${Math.round(nutri.kcal)}">0</span><small> 千卡</small></div>
           <div class="label" style="margin-top:4px">目标 ${plan.target} 千卡${workoutKcal ? ' · 运动+' + workoutKcal : ''}</div>
         </div>
         <div class="ring-wrap">
           ${ring(Math.min(pct, 100), '#ffffff', 'rgba(255,255,255,.28)')}
-          <div class="rtext"><b>${pct}%</b><i>${over ? '已超量 ⚠️' : '热量进度'}</i></div>
+          <div class="rtext"><b><span data-count="${pct}">0</span>%</b><i>${over ? '已超量 ⚠️' : '热量进度'}</i></div>
         </div>
       </div>
       <div class="card dm-budget-row">
@@ -123,10 +124,11 @@
       <div class="card">
         <h3>每日饮水（目标 8 杯）</h3>
         <div class="water-cups">${Array.from({ length: 8 }, (_, i) => `<span class="${i < cups ? 'on' : ''}" data-dm="cup" data-i="${i}">💧</span>`).join('')}</div>
-        <p class="muted" style="text-align:center">已喝 ${cups}/8 杯 · 少量多次更健康</p>
+        <p class="muted" style="text-align:center">已喝 <span data-count="${cups}">0</span>/8 杯 · 少量多次更健康</p>
       </div>
       <div class="tips"><span>🥗</span><p>每餐一拳主食、一掌优质蛋白、两拳蔬菜；减脂期缺口 300-500 千卡更可持续。</p></div>
     `;
+    runCountUps($('#app'));
   }
 
   /* ---------------- 子页：添加食物 ---------------- */
@@ -158,7 +160,7 @@
             <button class="add-btn" data-dm="add-food" data-id="${f.id}" data-meal="${meal}">+${kcal}</button>
           </div>
         </div>`;
-      }).join('') : '<div class="empty"><i>🍽️</i>没有找到相关食物，换个关键词或分类</div>';
+      }).join('') : emptyHTML('search', '没有找到相关食物', '换个关键词或分类试试');
       const done = $('#faDone', sub);
       done.textContent = added ? `完成（已记录 ${added} 项）` : '完成';
     };
@@ -177,9 +179,14 @@
     document.body.appendChild(sub);
     requestAnimationFrame(() => sub.classList.add('show'));
     if (foodsErr) {
-      $('#faList', sub).innerHTML = `<div class="empty"><i>📡</i>食物库加载失败
-        <button class="btn ghost" style="margin-top:10px" data-dm="retry">重新加载</button></div>`;
-    } else drawList();
+      $('#faList', sub).innerHTML = emptyHTML('search', '食物库加载失败', '请检查网络后重试',
+        '<button class="btn" data-dm="retry">重新加载</button>');
+    } else if (foods) {
+      drawList();
+    } else {
+      $('#faList', sub).innerHTML = foodSkeletonRows(7);
+      loadFoods().then(() => { if (document.body.contains(sub)) drawList(); });
+    }
 
     $('#faSearch', sub).addEventListener('input', e => { keyword = e.target.value; drawList(); });
     $('#faDone', sub).addEventListener('click', () => finishAdd(sub));
@@ -188,7 +195,8 @@
     sub.classList.remove('show');
     setTimeout(() => sub.remove(), 200);
     keyword = ''; catFilter = '全部';
-    showTab('diet');
+    recordsView = 'diet';
+    showTab('stats');
   }
   function addFoodTo(id, meal) {
     const f = foods.find(x => x.id === id);

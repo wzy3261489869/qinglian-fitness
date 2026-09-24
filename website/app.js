@@ -222,11 +222,14 @@ async function cloudDownload() {
   finally { if (btn) { btn.disabled = false; btn.textContent = '⬇️ 从云端恢复'; } }
 }
 async function doAuth(mode) {
-  const u = $('#authUser').value.trim(), p = $('#authPass').value;
-  if (!u || !p) { toast('请输入用户名和密码'); return; }
-  if (!/^[a-zA-Z0-9_]{3,20}$/.test(u)) { toast('用户名需3-20位字母/数字/下划线'); return; }
-  if (p.length < 6) { toast('密码至少6位'); return; }
-  const btn = $('#authBtn'); if (btn) { btn.disabled = true; btn.textContent = '请稍候…'; }
+  const uEl = $('#authUser'), pEl = $('#authPass');
+  const u = uEl.value.trim(), p = pEl.value;
+  if (!u || !p) { toast('请输入用户名和密码'); if (!u) uEl.focus(); else pEl.focus(); return; }
+  const uErr = userFieldMsg(u);
+  if (uErr) { toast(uErr); uEl.focus(); return; }
+  const pErr = passFieldMsg(p);
+  if (pErr) { toast(pErr); pEl.focus(); return; }
+  const btn = $('#authBtn'); if (btn) { btn.classList.add('loading'); }
   try {
     const r = await api('POST', mode === 'reg' ? '/api/register' : '/api/login', { username: u, password: p });
     if (r.ok) {
@@ -234,9 +237,9 @@ async function doAuth(mode) {
       store.set('auth', auth); toast(mode === 'reg' ? '注册成功 🎉' : '登录成功，' + r.username);
       renderMine();
       if (records.length === 0 && dietEntries.length === 0) cloudDownload();
-    } else toast(r.msg || '操作失败');
+    } else toast(friendlyAuthError(mode, r.msg));
   } catch (e) { toast('网络连接失败'); }
-  finally { if (btn) { btn.disabled = false; btn.textContent = mode === 'reg' ? '注册' : '登录'; } }
+  finally { if (btn) btn.classList.remove('loading'); }
 }
 function doLogout() {
   auth = { token: '', username: '', apiBase: auth.apiBase };
@@ -350,15 +353,137 @@ function goalTag(goal) {
   return `<span class="tag ${map[goal] || 'tag-begin'}">${esc(goal)}</span>`;
 }
 
+/* ================= UI 精修：空状态 / 骨架屏 / 数字动画 ================= */
+const EMPTY_ART = {
+  record: `<svg viewBox="0 0 120 120" fill="none" aria-hidden="true">
+    <circle cx="24" cy="26" r="5" fill="currentColor" opacity=".15"/>
+    <circle cx="99" cy="93" r="7" fill="currentColor" opacity=".12"/>
+    <path d="M40 30h40a8 8 0 0 1 8 8v52a8 8 0 0 1-8 8H40a8 8 0 0 1-8-8V38a8 8 0 0 1 8-8Z" stroke="currentColor" stroke-width="3.5"/>
+    <path d="M50 24v-4a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4v4" stroke="currentColor" stroke-width="3.5"/>
+    <path d="M44 56h32M44 70h32M44 84h20" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" opacity=".55"/>
+  </svg>`,
+  search: `<svg viewBox="0 0 120 120" fill="none" aria-hidden="true">
+    <circle cx="22" cy="24" r="4" fill="currentColor" opacity=".15"/>
+    <circle cx="96" cy="90" r="6" fill="currentColor" opacity=".12"/>
+    <circle cx="54" cy="54" r="28" stroke="currentColor" stroke-width="3.5"/>
+    <path d="M75 75l22 22" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+    <path d="M42 54h24M54 42v24" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" opacity=".5"/>
+  </svg>`,
+  train: `<svg viewBox="0 0 120 120" fill="none" aria-hidden="true">
+    <circle cx="26" cy="28" r="5" fill="currentColor" opacity=".15"/>
+    <circle cx="96" cy="92" r="7" fill="currentColor" opacity=".12"/>
+    <path d="M26 60h68" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+    <path d="M38 46v28M22 52v16M82 46v28M98 52v16" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>
+  </svg>`
+};
+function emptyHTML(type, title, sub, ctaHTML) {
+  return `<div class="empty-state">
+    <div class="es-art">${EMPTY_ART[type] || EMPTY_ART.record}</div>
+    <b>${esc(title)}</b>
+    ${sub ? `<p>${esc(sub)}</p>` : ''}
+    ${ctaHTML || ''}
+  </div>`;
+}
+
+/* 骨架屏 */
+const skeletonLine = (w, h, extra) =>
+  `<span class="skeleton ${extra || ''}" style="width:${w};height:${h || '14px'}"></span>`;
+function bootSkeletonHTML() {
+  return `<div class="boot-skel">
+    <div class="skeleton" style="width:46%;height:26px"></div>
+    <div class="skeleton" style="width:70%;height:12px;margin-top:10px"></div>
+    <div class="skeleton" style="width:100%;height:150px;margin-top:18px;border-radius:20px"></div>
+    <div class="skeleton" style="width:100%;height:84px;margin-top:12px;border-radius:16px"></div>
+    <div class="skeleton" style="width:100%;height:84px;margin-top:12px;border-radius:16px"></div>
+  </div>`;
+}
+function libSkeletonCards(n) {
+  let s = '';
+  for (let i = 0; i < n; i++) {
+    s += `<div class="lib-card sk-card" aria-hidden="true">
+      <span class="skeleton" style="width:100%;height:150px;border-radius:0"></span>
+      <span class="sk-body">
+        <span class="skeleton" style="width:70%;height:13px"></span>
+        <span class="skeleton" style="width:44%;height:11px;margin-top:9px"></span>
+      </span>
+    </div>`;
+  }
+  return s;
+}
+function foodSkeletonRows(n) {
+  let s = '';
+  for (let i = 0; i < n; i++) {
+    s += `<div class="dm-food-row sk-food" aria-hidden="true">
+      <span class="skeleton" style="width:38px;height:38px;border-radius:10px"></span>
+      <span style="flex:1">
+        <span class="skeleton" style="width:62%;height:13px;display:block"></span>
+        <span class="skeleton" style="width:38%;height:11px;margin-top:8px;display:block"></span>
+      </span>
+      <span class="skeleton" style="width:54px;height:30px;border-radius:999px"></span>
+    </div>`;
+  }
+  return s;
+}
+
+/* 数字滚动（count-up） */
+function runCountUps(scopeEl) {
+  const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  $$('[data-count]', scopeEl || document).forEach(el => {
+    const to = parseFloat(el.dataset.count);
+    if (isNaN(to)) { el.textContent = ''; return; }
+    const decimals = el.dataset.decimals ? parseInt(el.dataset.decimals, 10) : 0;
+    if (reduced) { el.textContent = decimals ? to.toFixed(decimals) : String(Math.round(to)); return; }
+    const dur = 750, t0 = performance.now();
+    function step(t) {
+      const p = Math.min(1, (t - t0) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      const v = to * eased;
+      el.textContent = decimals ? v.toFixed(decimals) : String(Math.round(v));
+      if (p < 1) requestAnimationFrame(step);
+      else el.textContent = decimals ? to.toFixed(decimals) : String(Math.round(to));
+    }
+    requestAnimationFrame(step);
+  });
+}
+
+/* 记录页分段切换条 */
+function recordsSegHTML() {
+  return `<div class="rec-seg" role="tablist" aria-label="记录类型">
+    <span class="rs-i ${recordsView === 'train' ? 'on' : ''}" data-rvseg="train" role="tab" aria-selected="${recordsView === 'train'}">🏋️ 训练记录</span>
+    <span class="rs-i ${recordsView === 'diet' ? 'on' : ''}" data-rvseg="diet" role="tab" aria-selected="${recordsView === 'diet'}">🥗 饮食记录</span>
+  </div>`;
+}
+document.addEventListener('click', e => {
+  const seg = e.target.closest('[data-rvseg]');
+  if (!seg) return;
+  const v = seg.dataset.rvseg;
+  if (recordsView === v) return;
+  recordsView = v;
+  if (currentTab === 'stats') showTab('stats');
+});
+
 /* ================= 路由 ================= */
-const TABS = ['home', 'plan', 'diet', 'stats', 'mine'];
+const TABS = ['home', 'plan', 'stats', 'mine'];
 let currentTab = 'home';
+let recordsView = 'train'; // 记录 Tab 内分段：train 训练记录 | diet 饮食记录
 
 function showTab(tab) {
   currentTab = tab;
+  document.body.dataset.tab = tab;
+  document.body.dataset.rv = tab === 'stats' ? recordsView : '';
   $$('#tabbar a').forEach(a => a.classList.toggle('active', a.dataset.tab === tab));
-  ({ home: renderHome, plan: renderPlan, diet: renderDiet, stats: renderStats, mine: renderMine })[tab]();
+  if (tab === 'stats') {
+    if (recordsView === 'diet') renderDiet();
+    else renderStats();
+  } else {
+    ({ home: renderHome, plan: renderPlan, mine: renderMine })[tab]();
+  }
   window.scrollTo(0, 0);
+  // 重启页面进入动画
+  const appEl = $('#app');
+  appEl.classList.remove('tab-enter');
+  void appEl.offsetWidth;
+  appEl.classList.add('tab-enter');
 }
 function closeSubpages() { $$('.subpage').forEach(p => p.classList.remove('show')); }
 
@@ -369,42 +494,54 @@ function renderHome() {
   const plan = calcPlan(profile);
   const pct = Math.min(100, Math.round(weekKcal / (plan.target * 0.2 || 1) * 100));
   $('#app').innerHTML = `
-    <div class="page-head">
-      <h1>${greeting()}，${esc(profile.nickname)}</h1>
-      <p>今天是 ${todayStr()} · 周${WEEK[new Date().getDay()]} · 距离周末还有${5 - (new Date().getDay() % 7) > 0 ? 5 - (new Date().getDay() % 7) : 0}天</p>
+    <div class="page-head home-head">
+      <div>
+        <h1>${greeting()}，${esc(profile.nickname)}</h1>
+        <p>今天是 ${todayStr()} · 周${WEEK[new Date().getDay()]} · 距离周末还有${5 - (new Date().getDay() % 7) > 0 ? 5 - (new Date().getDay() % 7) : 0}天</p>
+      </div>
+      <button class="head-icon-btn" id="quickTheme" aria-label="切换深色/浅色" title="切换深色/浅色">🌓</button>
     </div>
+    <div class="home-col home-col-l">
     <div class="hero">
       <div>
         <div class="label">本周已消耗</div>
-        <div class="big">${weekKcal}<small> 千卡</small></div>
+        <div class="big"><span data-count="${weekKcal}">0</span><small> 千卡</small></div>
         <div class="label" style="margin-top:4px">目标 ${esc(profile.goal)} · ${GOAL_TIPS[profile.goal] || ''}</div>
       </div>
       <div class="ring-wrap">${ring(pct, '#ffffff', 'rgba(255,255,255,.28)')}
         <div class="rtext"><b>${pct}%</b><i>周目标</i></div>
       </div>
     </div>
-    <div class="grid-stats">
-      <div class="gs"><b>${weekCount}</b><span>本周训练</span></div>
-      <div class="gs"><b>${records.reduce((s, r) => s + r.minutes, 0)}</b><span>总分钟</span></div>
-      <div class="gs"><b>${records.length}</b><span>总次数</span></div>
-      <div class="gs"><b>${records.reduce((s, r) => s + r.kcal, 0)}</b><span>总千卡</span></div>
-    </div>
-    ${RewardsModule.encouragementHTML()}
     <div class="section-title"><h2>今日训练</h2><a data-nav="plan">课表 ›</a></div>
     ${PlanModule.todayCard()}
+    <div class="section-title"><h2>热门计划</h2><a data-nav="plan">全部 ›</a></div>
+    ${PlanModule.plans.slice(0, 3).map(PlanModule.planCardHTML).join('')}
+    </div>
+    <div class="home-col home-col-r">
+    <div class="grid-stats">
+      <div class="gs"><b data-count="${weekCount}">0</b><span>本周训练</span></div>
+      <div class="gs"><b data-count="${records.reduce((s, r) => s + r.minutes, 0)}">0</b><span>总分钟</span></div>
+      <div class="gs"><b data-count="${records.length}">0</b><span>总次数</span></div>
+      <div class="gs"><b data-count="${records.reduce((s, r) => s + r.kcal, 0)}">0</b><span>总千卡</span></div>
+    </div>
+    ${RewardsModule.encouragementHTML()}
     <div class="section-title"><h2>快捷入口</h2></div>
     <div class="quick q5">
       <div class="q" data-lib><i>📚</i>动作库</div>
       <div class="q" data-nav="plan"><i>💪</i>开始训练</div>
-      <div class="q" data-nav="diet"><i>🥗</i>饮食记录</div>
-      <div class="q" data-nav="stats"><i>📊</i>数据统计</div>
+      <div class="q" data-nav="stats" data-rv="diet"><i>🥗</i>饮食记录</div>
+      <div class="q" data-nav="stats" data-rv="train"><i>📊</i>数据统计</div>
       <div class="q" data-nav="mine"><i>👤</i>个人中心</div>
     </div>
-    <div class="section-title"><h2>热门计划</h2><a data-nav="plan">全部 ›</a></div>
-    ${PlanModule.plans.slice(0, 3).map(PlanModule.planCardHTML).join('')}
+    </div>
     <div class="tips"><span>💡</span><p>${esc(GOAL_TIPS[profile.goal])}。健身贵在坚持，微小的习惯长期复利。</p></div>
   `;
   bindPlanCards();
+  $('#quickTheme').addEventListener('click', () => {
+    const effectiveDark = theme === 'dark' || (theme === 'auto' && systemDark());
+    setTheme(effectiveDark ? 'light' : 'dark');
+  });
+  runCountUps();
 }
 function recommendPlan() {
   const pool = PLANS.filter(p => p.goal === profile.goal);
@@ -423,7 +560,10 @@ function planCard(p) {
 }
 function bindPlanCards() {
   $$('#app .plan-card').forEach(el => el.addEventListener('click', () => openWorkout(el.dataset.plan)));
-  $$('#app [data-nav]').forEach(el => el.addEventListener('click', () => showTab(el.dataset.nav)));
+  $$('#app [data-nav]').forEach(el => el.addEventListener('click', () => {
+    if (el.dataset.rv) recordsView = el.dataset.rv;
+    showTab(el.dataset.nav);
+  }));
   $$('#app [data-lib]').forEach(el => el.addEventListener('click', openLibrary));
 }
 
@@ -792,7 +932,7 @@ function openLibrary() {
     <div class="sp-body">
       <input class="lib-search" id="libSearch" placeholder="搜索动作，如：深蹲、卧推、硬拉" type="search">
       <div class="chips">${LIB_GROUPS.map(g => `<span class="chip ${libFilter === g ? 'active' : ''}" data-g="${g}">${g}</span>`).join('')}</div>
-      <div class="lib-grid" id="libGrid"><div class="lib-loading">正在加载动作…</div></div>
+      <div class="lib-grid" id="libGrid">${libSkeletonCards(8)}</div>
     </div>`;
   document.body.appendChild(sub);
   requestAnimationFrame(() => sub.classList.add('show'));
@@ -805,7 +945,15 @@ function openLibrary() {
   }));
   loadLib()
     .then(() => renderLibGrid(sub))
-    .catch(() => { $('#libGrid', sub).innerHTML = '<div class="lib-loading">加载失败，请检查网络后重试</div>'; });
+    .catch(() => {
+      $('#libGrid', sub).innerHTML = emptyHTML('search', '动作加载失败', '请检查网络连接后重试',
+        '<button class="btn" id="libRetry">重新加载</button>');
+      const retry = $('#libRetry', sub);
+      if (retry) retry.addEventListener('click', () => {
+        $('#libGrid', sub).innerHTML = libSkeletonCards(8);
+        loadLib().then(() => renderLibGrid(sub));
+      });
+    });
 }
 
 function renderLibGrid(sub) {
@@ -815,7 +963,7 @@ function renderLibGrid(sub) {
     (libFilter === '全部' || x.g === libFilter) &&
     (!libQuery || x.n.toLowerCase().includes(libQuery) || x.t.toLowerCase().includes(libQuery)));
   if (!list.length) {
-    grid.innerHTML = '<div class="lib-empty">🔍 没有找到相关动作<br><span>换个关键词或筛选条件试试</span></div>';
+    grid.innerHTML = emptyHTML('search', '没有找到相关动作', libQuery ? '换个关键词试试' : '换个筛选条件试试');
     return;
   }
   grid.innerHTML = list.map(libCard).join('');
@@ -921,48 +1069,58 @@ function renderStats() {
   }
   const recent = records.slice(0, 10);
   $('#app').innerHTML = `
-    <div class="page-head"><h1>训练数据</h1><p>坚持是最大的天赋 · 已记录 ${records.length} 次训练</p></div>
+    <div class="page-head">
+      <h1>训练数据</h1>
+      <p>坚持是最大的天赋 · 已记录 ${records.length} 次训练</p>
+    </div>
+    ${recordsSegHTML()}
     <div class="grid-stats">
-      <div class="gs"><b>${records.length}</b><span>总次数</span></div>
-      <div class="gs"><b>${records.reduce((s, r) => s + r.minutes, 0)}</b><span>总分钟</span></div>
-      <div class="gs"><b>${records.reduce((s, r) => s + r.kcal, 0)}</b><span>总千卡</span></div>
+      <div class="gs"><b data-count="${records.length}">0</b><span>总次数</span></div>
+      <div class="gs"><b data-count="${records.reduce((s, r) => s + r.minutes, 0)}">0</b><span>总分钟</span></div>
+      <div class="gs"><b data-count="${records.reduce((s, r) => s + r.kcal, 0)}">0</b><span>总千卡</span></div>
     </div>
     <div class="streak-row" style="margin-top:12px">
-      <div class="st"><b>${streak}</b><span>连续打卡（天）</span></div>
-      <div class="st"><b>${records.filter(r => r.date === today).length}</b><span>今日训练</span></div>
+      <div class="st"><b data-count="${streak}">0</b><span>连续打卡（天）</span></div>
+      <div class="st"><b data-count="${records.filter(r => r.date === today).length}">0</b><span>今日训练</span></div>
     </div>
-    <div class="card rw-share-today" data-rw="share-today">
-      <span class="st-ic">🏅</span>
-      <span><b>生成训练海报</b><small>${records.some(r => r.date === today) ? '今日数据已就绪 · 生成分享卡片' : '完成今日训练后即可生成'}</small></span>
-      <span class="go-arrow">海报 ›</span>
-    </div>
-    <div class="card">
-      <h3>训练热力图（近一年）</h3>
-      ${RewardsModule.heatmapHTML()}
-    </div>
-    <div class="card">
-      ${RewardsModule.reminderHTML()}
-    </div>
-    <div class="card"><h3>近 7 天耗能</h3>
-      <div class="chart">${weekData.map(x => `
-        <div class="col"><i style="height:${Math.round(x.kcal / maxK * 88)}%" title="${x.kcal}"></i><em>${x.d.slice(5).replace('-', '/')}</em></div>`).join('')}
+    <div class="stats-dash">
+      <div class="card rw-share-today" data-rw="share-today">
+        <span class="st-ic">🏅</span>
+        <span><b>生成训练海报</b><small>${records.some(r => r.date === today) ? '今日数据已就绪 · 生成分享卡片' : '完成今日训练后即可生成'}</small></span>
+        <span class="go-arrow">海报 ›</span>
       </div>
-    </div>
-    <div class="card"><h3>${y} 年 ${m + 1} 月</h3><div class="cal">${cal}</div></div>
-    <div class="card"><h3>最近记录</h3>
-      ${recent.length ? recent.map(r => `
-        <div class="rec">
-          <div class="ri"><b>${esc(r.planTitle)}</b><span>${r.date} · ${r.minutes} 分钟 · ${r.doneCount}/${r.total} 动作</span></div>
-          <b style="color:var(--accent);font-size:13px">${r.kcal} 千卡</b>
-          <span class="share-link" data-rw="share-date" data-date="${r.date}">海报</span>
-          <span class="del" data-del="${r.id}">删除</span>
-        </div>`).join('') : '<div class="empty"><i>📝</i>还没有训练记录，去开始第一次训练吧</div>'}
+      <div class="card">
+        ${RewardsModule.reminderHTML()}
+      </div>
+      <div class="card span-2">
+        <h3>训练热力图（近一年）</h3>
+        ${RewardsModule.heatmapHTML()}
+      </div>
+      <div class="card"><h3>近 7 天耗能</h3>
+        <div class="chart">${weekData.map(x => `
+          <div class="col"><i style="height:${Math.round(x.kcal / maxK * 88)}%" title="${x.kcal}"></i><em>${x.d.slice(5).replace('-', '/')}</em></div>`).join('')}
+        </div>
+      </div>
+      <div class="card"><h3>${y} 年 ${m + 1} 月</h3><div class="cal">${cal}</div></div>
+      <div class="card span-2"><h3>最近记录</h3>
+        ${recent.length ? recent.map(r => `
+          <div class="rec">
+            <div class="ri"><b>${esc(r.planTitle)}</b><span>${r.date} · ${r.minutes} 分钟 · ${r.doneCount}/${r.total} 动作</span></div>
+            <b style="color:var(--accent);font-size:13px">${r.kcal} 千卡</b>
+            <span class="share-link" data-rw="share-date" data-date="${r.date}">海报</span>
+            <span class="del" data-del="${r.id}">删除</span>
+          </div>`).join('') : emptyHTML('record', '还没有训练记录', '完成第一次训练后，数据会出现在这里',
+            '<button class="btn" id="statsEmptyCta">去开始第一次训练</button>')}
+      </div>
     </div>
   `;
   $$('#app .rec .del').forEach(el => el.addEventListener('click', () => {
     records = records.filter(r => r.id !== el.dataset.del);
     saveRecords(); renderStats(); toast('已删除');
   }));
+  const emptyCta = $('#statsEmptyCta');
+  if (emptyCta) emptyCta.addEventListener('click', () => showTab('plan'));
+  runCountUps();
 }
 
 /* ================= 我的页 ================= */
@@ -994,6 +1152,7 @@ function renderMine() {
       </div>
       <button class="edit-btn" id="editNick">编辑</button>
     </div>
+    <div class="mine-col mine-col-l">
     <div class="card">
       <h3>身体数据</h3>
       <div class="bmi-visual" style="margin-bottom:6px">
@@ -1014,6 +1173,8 @@ function renderMine() {
       <h3>体重 · 饮食趋势（近 14 天）</h3>
       <div id="trendBox"></div>
     </div>
+    </div>
+    <div class="mine-col mine-col-r">
     <div class="card">
       <h3>健身目标</h3>
       <div class="goal-opts">${GOALS.map(g => `<span class="chip ${profile.goal === g ? 'active' : ''}" data-goal="${g}">${g}</span>`).join('')}</div>
@@ -1057,22 +1218,27 @@ function renderMine() {
         </div>
         <p class="muted" style="margin-top:10px">训练记录、饮食数据、身体档案将同步到服务器，换设备登录同一账号即可恢复。</p>
       ` : `
-        <input id="authUser" placeholder="用户名（3-20位字母数字）" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #ddd;border-radius:10px;font-size:14px;margin-bottom:8px"/>
-        <input id="authPass" type="password" placeholder="密码（至少6位）" style="width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #ddd;border-radius:10px;font-size:14px;margin-bottom:10px"/>
-        <div style="display:flex;gap:8px">
-          <span class="chip" id="authBtn" style="flex:1;text-align:center">登录</span>
-          <span class="chip" id="authBtnReg" style="flex:1;text-align:center">注册新账号</span>
-        </div>
-        <p class="muted" style="margin-top:10px">注册后数据可云同步：换手机、换浏览器登录同一账号即可恢复全部记录。</p>
-      `}
+          <input id="authUser" class="field-input" placeholder="用户名（3-20位字母数字）"
+            autocomplete="username" autocapitalize="none" spellcheck="false"/>
+          <p class="field-msg" id="authUserMsg" aria-live="polite"></p>
+          <input id="authPass" type="password" class="field-input" placeholder="密码（至少6位）"
+            autocomplete="current-password"/>
+          <p class="field-msg" id="authPassMsg" aria-live="polite"></p>
+          <div style="display:flex;gap:8px">
+            <span class="chip" id="authBtn" style="flex:1;justify-content:center">登录</span>
+            <span class="chip" id="authBtnReg" style="flex:1;justify-content:center">注册新账号</span>
+          </div>
+          <p class="muted" style="margin-top:10px">注册后数据可云同步：换手机、换浏览器登录同一账号即可恢复全部记录。</p>
+        `}
     </div>
     <div class="card"><h3>我的成就</h3>
       <div class="badges">${badges.map(b => `<div class="badge ${b.on ? 'on' : ''}"><i>${b.icon}</i><span>${b.name}</span></div>`).join('')}</div>
     </div>
     <div class="card">
       <h3>关于轻练</h3>
-      <p class="muted">轻练 · 合理健身网站版 v1.7.0</p>
+      <p class="muted">轻练 · 合理健身网站版 v1.8.0</p>
       <p class="muted" style="margin-top:4px">数据默认保存在本机浏览器；登录账号后可云同步到服务器，随时换设备恢复。</p>
+    </div>
     </div>
   `;
   $('#editNick').addEventListener('click', () => editField('昵称', 'nickname', 'text'));
@@ -1099,9 +1265,14 @@ function renderMine() {
     $('#cloudDownloadBtn').addEventListener('click', cloudDownload);
     $('#btnOut').addEventListener('click', doLogout);
   } else {
+    const au = $('#authUser'), ap = $('#authPass');
+    au.addEventListener('input', e => setFieldMsg('#authUser', '#authUserMsg', userFieldMsg(e.target.value.trim())));
+    ap.addEventListener('input', e => setFieldMsg('#authPass', '#authPassMsg', passFieldMsg(e.target.value)));
+    au.addEventListener('blur', e => { if (e.target.value) setFieldMsg('#authUser', '#authUserMsg', userFieldMsg(e.target.value.trim())); });
+    ap.addEventListener('blur', e => { if (e.target.value) setFieldMsg('#authPass', '#authPassMsg', passFieldMsg(e.target.value)); });
     $('#authBtn').addEventListener('click', () => doAuth('login'));
     $('#authBtnReg').addEventListener('click', () => doAuth('reg'));
-    $('#authPass').addEventListener('keydown', e => { if (e.key === 'Enter') doAuth('login'); });
+    ap.addEventListener('keydown', e => { if (e.key === 'Enter') doAuth('login'); });
   }
   DietModule.mountTrend();
 }
@@ -1124,6 +1295,33 @@ function resumeSessionIfAny() {
 
 // 登录门控：未登录时显示登录界面，登录后才进入应用
 let gateMode = 'login';
+/* 字段实时校验 */
+function userFieldMsg(v) {
+  if (!v) return '';
+  if (v.length < 3) return '至少 3 个字符';
+  if (!/^[a-zA-Z0-9_]+$/.test(v)) return '只能包含字母、数字、下划线';
+  if (v.length > 20) return '最多 20 个字符';
+  return '';
+}
+function passFieldMsg(v) {
+  if (!v) return '';
+  if (v.length < 6) return '密码至少 6 位';
+  return '';
+}
+function setFieldMsg(inputSel, msgSel, msg) {
+  const inputEl = $(inputSel), msgEl = $(msgSel);
+  if (!inputEl || !msgEl) return;
+  inputEl.classList.toggle('field-error', !!msg);
+  msgEl.textContent = msg;
+  msgEl.classList.toggle('show', !!msg);
+}
+function friendlyAuthError(mode, msg) {
+  if (mode === 'login' && msg === '用户名或密码错误')
+    return '用户名或密码不正确，请重新输入；若忘记密码，可用同一用户名重新注册';
+  if (mode === 'reg' && msg === '用户名已存在')
+    return '这个用户名已被注册，换一个试试，或直接去登录';
+  return msg || '操作失败，请稍后重试';
+}
 function setGateMode(mode) {
   gateMode = mode;
   const gate = $('#loginGate');
@@ -1134,6 +1332,8 @@ function setGateMode(mode) {
   pass.setAttribute('autocomplete', mode === 'reg' ? 'new-password' : 'current-password');
   pass.setAttribute('enterkeyhint', mode === 'reg' ? 'send' : 'go');
   hideGateError();
+  setFieldMsg('#gateUser', '#gateUserMsg', '');
+  setFieldMsg('#gatePass', '#gatePassMsg', '');
 }
 function showGateError(msg) {
   const el = $('#gateError');
@@ -1159,9 +1359,23 @@ function showLoginGate() {
       if (gateMode === 'login') { setGateMode('reg'); $('#gateUser').focus(); }
       else setGateMode('login');
     });
-    // 输入时清除错误提示
-    $('#gateUser').addEventListener('input', hideGateError);
-    $('#gatePass').addEventListener('input', hideGateError);
+    // 输入时实时校验并清除顶部错误
+    $('#gateUser').addEventListener('input', e => {
+      hideGateError();
+      setFieldMsg('#gateUser', '#gateUserMsg', userFieldMsg(e.target.value.trim()));
+    });
+    $('#gatePass').addEventListener('input', e => {
+      hideGateError();
+      setFieldMsg('#gatePass', '#gatePassMsg', passFieldMsg(e.target.value));
+    });
+    $('#gateUser').addEventListener('blur', e => {
+      const v = e.target.value.trim();
+      if (v) setFieldMsg('#gateUser', '#gateUserMsg', userFieldMsg(v));
+    });
+    $('#gatePass').addEventListener('blur', e => {
+      const v = e.target.value;
+      if (v) setFieldMsg('#gatePass', '#gatePassMsg', passFieldMsg(v));
+    });
   }
   setTimeout(() => {
     if (!$('#gateUser').value) $('#gateUser').focus();
@@ -1175,10 +1389,13 @@ function hideLoginGate() {
   $('#tabbar').style.display = '';
 }
 async function gateAuth(mode) {
-  const u = ($('#gateUser').value || '').trim(), p = $('#gatePass').value || '';
-  if (!u || !p) { showGateError('请输入用户名和密码'); return; }
-  if (!/^[a-zA-Z0-9_]{3,20}$/.test(u)) { showGateError('用户名需 3-20 位字母/数字/下划线'); $('#gateUser').focus(); return; }
-  if (p.length < 6) { showGateError('密码至少 6 位'); $('#gatePass').focus(); return; }
+  const uEl = $('#gateUser'), pEl = $('#gatePass');
+  const u = (uEl.value || '').trim(), p = pEl.value || '';
+  if (!u || !p) { showGateError('请输入用户名和密码'); if (!u) uEl.focus(); else pEl.focus(); return; }
+  const uErr = userFieldMsg(u);
+  if (uErr) { showGateError(uErr); setFieldMsg('#gateUser', '#gateUserMsg', uErr); uEl.focus(); return; }
+  const pErr = passFieldMsg(p);
+  if (pErr) { showGateError(pErr); setFieldMsg('#gatePass', '#gatePassMsg', pErr); pEl.focus(); return; }
   const primary = $('#gateLoginBtn'), secondary = $('#gateRegBtn');
   primary.disabled = secondary.disabled = true;
   primary.classList.add('loading');
@@ -1196,10 +1413,10 @@ async function gateAuth(mode) {
     showTab('home');
     resumeSessionIfAny();
   } else {
-    showGateError(r.msg || '操作失败，请稍后重试');
-    // 密码类错误：聚焦密码框并选中，方便直接重输
-    $('#gatePass').focus();
-    $('#gatePass').select();
+    showGateError(friendlyAuthError(mode, r.msg));
+    // 注册冲突聚焦用户名（换名字）；其余聚焦密码方便直接重输
+    if (mode === 'reg' && r.msg === '用户名已存在') { uEl.focus(); uEl.select(); }
+    else { pEl.focus(); pEl.select(); }
   }
 }
 // 退出登录时重新显示门控
@@ -1210,6 +1427,7 @@ const _origApi = api;
 
 // 启动检查：有 token 则验证，无 token 直接显示登录
 async function initApp() {
+  $('#app').innerHTML = bootSkeletonHTML();
   if (auth.token) {
     // 验证 token 是否有效
     try {

@@ -243,7 +243,8 @@
         <div class="chips">${GOALS.map(g => `<span class="chip ${filter.goal === g ? 'active' : ''}" data-tp="tp-filter" data-k="goal" data-v="${g}">${g}</span>`).join('')}</div>
         <div class="chips">${LEVELS.map(l => `<span class="chip ${filter.level === l ? 'active' : ''}" data-tp="tp-filter" data-k="level" data-v="${l}">${l}</span>`).join('')}</div>
       </div>
-      <div class="tp-list">${list.map(planCardHTML).join('') || '<div class="empty"><i>🔍</i>该组合下暂无计划，换个筛选试试</div>'}</div>
+      ${list.length ? `<div class="tp-list">${list.map(planCardHTML).join('')}</div>`
+        : emptyHTML('search', '该组合下暂无计划', '换个筛选试试')}
     `;
   }
 

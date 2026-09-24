@@ -37,11 +37,13 @@
           <input id="gateUser" name="username" placeholder="3-20位字母/数字/下划线"
             autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false"
             enterkeyhint="next" maxlength="20" />
+          <p class="field-msg" id="gateUserMsg" aria-live="polite"></p>
         </div>
         <div class="lg-field">
           <label for="gatePass" class="lg-label">密码</label>
           <input id="gatePass" name="password" type="password" placeholder="至少 6 位"
             autocomplete="current-password" enterkeyhint="go" maxlength="40" />
+          <p class="field-msg" id="gatePassMsg" aria-live="polite"></p>
         </div>
         <p class="lg-error" id="gateError" role="alert" hidden></p>
         <div class="lg-btns">
@@ -53,11 +55,10 @@
     </div>
   </div>
   <div id="app"></div>
-  <nav id="tabbar">
+  <nav id="tabbar" aria-label="主导航">
     <a data-tab="home" class="active"><span class="ticon">🏠</span><span>首页</span></a>
-    <a data-tab="plan"><span class="ticon">📋</span><span>计划</span></a>
-    <a data-tab="diet"><span class="ticon">🥗</span><span>饮食</span></a>
-    <a data-tab="stats"><span class="ticon">📊</span><span>数据</span></a>
+    <a data-tab="plan"><span class="ticon">🏋️</span><span>训练</span></a>
+    <a data-tab="stats"><span class="ticon">📊</span><span>记录</span></a>
     <a data-tab="mine"><span class="ticon">👤</span><span>我的</span></a>
   </nav>
   <div id="toast"></div>
