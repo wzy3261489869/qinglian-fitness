@@ -330,11 +330,13 @@
       </div>`;
       return;
     }
-    // 画布参数
-    const W = 340, H = 208, L = 36, R = 40, T = 16, B = 28;
+    // 画布参数（绘图区 ≥180px）
+    const W = 340, H = 236, L = 38, R = 40, T = 16, B = 28;
     const pw = W - L - R, ph = H - T - B;
     const x = i => L + (N === 1 ? 0 : i * pw / (N - 1));
+    const wByI = {};
     const wVals = wPts.map(p => p.v);
+    wPts.forEach(p => { wByI[p.i] = p.v; });
     const wMin = Math.floor(Math.min(...wVals) - 1), wMax = Math.ceil(Math.max(...wVals) + 1);
     const wRange = Math.max(wMax - wMin, 2);
     const kMaxRaw = Math.max(...kPts.map(p => p.v), plan.target);
@@ -342,26 +344,30 @@
     const yW = v => T + ph - (v - wMin) / wRange * ph;
     const yK = v => T + ph - v / kMax * ph;
 
-    // 网格 + 双轴标签（4条）
+    // 网格（1px 10% 透明度）+ 双轴标签（11px，5 条刻度）
     let grid = '';
     for (let g = 0; g <= 4; g++) {
       const yy = T + ph * g / 4;
-      grid += `<line x1="${L}" y1="${yy}" x2="${W - R}" y2="${yy}" stroke="var(--divider)" stroke-width="1"/>`;
-      grid += `<text x="${L - 6}" y="${yy + 3}" text-anchor="end" font-size="9" fill="var(--text-3)">${(wMax - wRange * g / 4).toFixed(0)}</text>`;
-      grid += `<text x="${W - R + 6}" y="${yy + 3}" font-size="9" fill="var(--text-3)">${Math.round(kMax - kMax * g / 4)}</text>`;
+      grid += `<line x1="${L}" y1="${yy}" x2="${W - R}" y2="${yy}" stroke="var(--chart-grid)" stroke-width="1"/>`;
+      grid += `<text x="${L - 6}" y="${yy + 4}" text-anchor="end" font-size="11" fill="var(--text-3)">${(wMax - wRange * g / 4).toFixed(0)}</text>`;
+      grid += `<text x="${W - R + 6}" y="${yy + 4}" font-size="11" fill="var(--text-3)">${grp(Math.round(kMax - kMax * g / 4))}</text>`;
     }
-    // X 轴日期
+    // X 轴日期（11px，3 个避免拥挤）
     let xlab = '';
     [0, 6, N - 1].forEach(i => {
-      xlab += `<text x="${x(i)}" y="${H - 8}" text-anchor="middle" font-size="9" fill="var(--text-3)">${days[i].slice(5).replace('-', '/')}</text>`;
+      xlab += `<text x="${x(i)}" y="${H - 9}" text-anchor="middle" font-size="11" fill="var(--text-3)">${days[i].slice(5).replace('-', '/')}</text>`;
     });
     const linePath = pts => pts.map((p, j) => (j ? 'L' : 'M') + x(p.i) + ' ' + p.y(p.v)).join(' ');
     const wPathPts = wPts.map(p => ({ i: p.i, v: p.v, y: yW }));
     const kPathPts = kPts.map(p => ({ i: p.i, v: p.v, y: yK }));
-    // 摄入面积填充
+    // 摄入面积填充（主色 30% → 透明）
     const area = `M${x(0)} ${T + ph} ` + kPts.map(p => `L${x(p.i)} ${yK(p.v)}`).join(' ') + ` L${x(N - 1)} ${T + ph} Z`;
     const dots = (pts, yf, color, key) => pts.map(p =>
-      `<circle cx="${x(p.i)}" cy="${yf(p.v)}" r="${key === 'w' ? 3.4 : 2.2}" fill="${color}"/>`).join('');
+      `<circle cx="${x(p.i)}" cy="${yf(p.v)}" r="${key === 'w' ? 3.4 : 2.6}" fill="${color}" stroke="var(--bg-card)" stroke-width="1.2"/>`).join('');
+    // 每列隐形热区
+    const slotW = pw / N;
+    const zones = Array.from({ length: N }, (_, i) =>
+      `<rect class="chart-hz" x="${L + slotW * i}" y="${T}" width="${slotW}" height="${ph}" data-i="${i}"/>`).join('');
 
     box.innerHTML = `
       <div class="trend-legend">
@@ -369,9 +375,10 @@
         <span><i style="background:var(--primary)"></i>摄入（右轴 千卡）</span>
         <span><i style="background:var(--accent)"></i>目标 ${plan.target}</span>
       </div>
+      <div class="chart-host trend-host" id="trendHost">
       <svg viewBox="0 0 ${W} ${H}" class="trend-svg" role="img" aria-label="体重与饮食热量对比曲线">
         <defs><linearGradient id="kfill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="var(--primary)" stop-opacity=".22"/>
+          <stop offset="0" stop-color="var(--primary)" stop-opacity=".3"/>
           <stop offset="1" stop-color="var(--primary)" stop-opacity="0"/>
         </linearGradient></defs>
         ${grid}${xlab}
@@ -382,8 +389,16 @@
         <path d="${linePath(wPathPts)}" fill="none" stroke="#165dff" stroke-width="2"/>
         ${dots(kPts, yK, 'var(--primary)', 'k')}
         ${dots(wPts, yW, '#165dff', 'w')}
+        ${zones}
       </svg>
+      </div>
       <button class="btn ghost full" data-dm="open-weight" style="height:38px;margin-top:6px">⚖️ 记录今日体重</button>`;
+    ChartTip.bind(document.getElementById('trendHost'), i => ({
+      date: days[i],
+      rows: [
+        { c: 'var(--primary)', t: '摄入', v: grp(kPts[i].v) + ' 千卡' }
+      ].concat(wByI[i] != null ? [{ c: '#165dff', t: '体重', v: fmtWeight(wByI[i]) + ' kg' }] : [])
+    }));
   }
 
   /* ---------------- 事件委托 ---------------- */

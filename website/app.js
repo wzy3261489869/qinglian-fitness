@@ -463,6 +463,106 @@ function metricCard(label, num, unit, o) {
   </div>`;
 }
 
+/* ============== 图表：悬浮提示卡（v2.0.0） ==============
+   用法：ChartTip.bind(容器元素, i => ({date, rows:[{c,t,v}]}))
+   容器内 SVG 的 .chart-hz 隐形热区需带 data-i */
+const ChartTip = {
+  bind(host, getInfo) {
+    if (!host) return;
+    let tip = host.querySelector(':scope > .chart-tip');
+    if (!tip) {
+      tip = document.createElement('div');
+      tip.className = 'chart-tip';
+      host.appendChild(tip);
+    }
+    const show = (i, clientX, clientY) => {
+      const info = getInfo(i);
+      if (!info) return;
+      tip.innerHTML = `<div class="ct-date">${info.date}</div>` +
+        info.rows.map(r => `<div class="ct-row"><span class="ct-dot" style="background:${r.c}"></span>` +
+          `<span class="ct-t">${r.t}</span><b>${r.v}</b></div>`).join('');
+      const hr = host.getBoundingClientRect();
+      let x = clientX - hr.left + 12, y = clientY - hr.top - tip.offsetHeight - 10;
+      if (x + tip.offsetWidth > hr.width - 4) x = clientX - hr.left - tip.offsetWidth - 12;
+      if (y < 4) y = clientY - hr.top + 14;
+      tip.style.transform = `translate(${x}px, ${y}px)`;
+      tip.classList.add('show');
+    };
+    host.addEventListener('mousemove', e => {
+      const z = e.target.closest ? e.target.closest('.chart-hz') : null;
+      if (z) show(+z.dataset.i, e.clientX, e.clientY);
+    });
+    host.addEventListener('mouseleave', () => tip.classList.remove('show'));
+    host.addEventListener('touchstart', e => {
+      const z = e.target.closest ? e.target.closest('.chart-hz') : null;
+      if (z && e.touches[0]) { show(+z.dataset.i, e.touches[0].clientX, e.touches[0].clientY); }
+    }, { passive: true });
+    host.addEventListener('touchend', () => setTimeout(() => tip.classList.remove('show'), 1400));
+  }
+};
+window.ChartTip = ChartTip;
+
+/* ============== 柱状图 SVG（品牌色渐变柱 / 5 刻度网格 / 180px+） ============== */
+function barChartSVG(uid, points, opts) {
+  opts = opts || {};
+  const W = 340, H = 232, L = 38, R = 12, T = 14, B = 28;
+  const pw = W - L - R, ph = H - T - B;
+  const maxRaw = Math.max(...points.map(p => p.v), opts.minMax || 1);
+  // 取整到合适步长，保证 5 条网格
+  const niceStep = v => {
+    const pow = Math.pow(10, String(Math.floor(v)).length - 1);
+    const n = v / pow;
+    const step = (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * pow;
+    return Math.max(step / 4, 1);
+  };
+  const step = niceStep(maxRaw);
+  const maxV = Math.max(Math.ceil(maxRaw / step) * step, step);
+  const n = points.length;
+  const slot = pw / n;
+  const bw = Math.min(slot * .52, 34);
+  const y = v => T + ph - v / maxV * ph;
+  let grid = '';
+  for (let g = 0; g <= 4; g++) {
+    const val = maxV * g / 4, yy = y(val);
+    grid += `<line x1="${L}" y1="${yy}" x2="${W - R}" y2="${yy}" stroke="var(--chart-grid)" stroke-width="1"/>`;
+    grid += `<text x="${L - 7}" y="${yy + 4}" text-anchor="end" font-size="11" fill="var(--text-3)">${grp(Math.round(val))}</text>`;
+  }
+  const bars = points.map((p, i) => {
+    const cx = L + slot * i + slot / 2;
+    const h = Math.max(p.v / maxV * ph, p.v ? 3 : 0);
+    const yy = T + ph - h;
+    const r = Math.min(5, bw / 2);
+    // 圆角顶柱
+    const d = h
+      ? `M${cx - bw / 2},${T + ph} L${cx - bw / 2},${yy + r} Q${cx - bw / 2},${yy} ${cx - bw / 2 + r},${yy} L${cx + bw / 2 - r},${yy} Q${cx + bw / 2},${yy} ${cx + bw / 2},${yy + r} L${cx + bw / 2},${T + ph} Z`
+      : '';
+    return `<path d="${d}" fill="url(#${uid}-g)"/>` +
+      `<text x="${cx}" y="${H - 9}" text-anchor="middle" font-size="11" fill="var(--text-3)">${p.x}</text>`;
+  }).join('');
+  // 隐形热区
+  const zones = points.map((p, i) =>
+    `<rect class="chart-hz" x="${L + slot * i}" y="${T}" width="${slot}" height="${ph}" data-i="${i}"/>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" class="chart-svg" role="img" aria-label="${opts.aria || '柱状图'}">
+    <defs><linearGradient id="${uid}-g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="var(--primary)" stop-opacity="1"/>
+      <stop offset="1" stop-color="var(--primary)" stop-opacity=".3"/>
+    </linearGradient></defs>
+    ${grid}${bars}${zones}
+  </svg>`;
+}
+
+/* 历史最长连续打卡（PR 用） */
+function longestStreak() {
+  const days = [...new Set(records.map(r => r.date))].sort();
+  let best = 0, cur = 0, prev = null;
+  days.forEach(d => {
+    cur = prev && d === addDays(prev, 1) ? cur + 1 : 1;
+    best = Math.max(best, cur);
+    prev = d;
+  });
+  return best;
+}
+
 /* 数字滚动（count-up；支持 data-group 千分位、data-decimals 小数） */
 function runCountUps(scopeEl) {
   const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1099,7 +1199,6 @@ function renderStats() {
   const today = todayStr();
   const week = Array.from({ length: 7 }, (_, i) => addDays(today, i - 6));
   const weekData = week.map(d => ({ d, kcal: records.filter(r => r.date === d).reduce((s, r) => s + r.kcal, 0) }));
-  const maxK = Math.max(...weekData.map(x => x.kcal), 1);
   const streak = streakDays();
   // 当月日历
   const now = new Date();
@@ -1117,6 +1216,22 @@ function renderStats() {
   const totalMin = records.reduce((s, r) => s + r.minutes, 0);
   const totalKcal = records.reduce((s, r) => s + r.kcal, 0);
   const todayCount = records.filter(r => r.date === today).length;
+  // PR：按日聚合取最高
+  const dayAgg = {};
+  records.forEach(r => {
+    dayAgg[r.date] = dayAgg[r.date] || { kcal: 0, min: 0 };
+    dayAgg[r.date].kcal += r.kcal;
+    dayAgg[r.date].min += r.minutes;
+  });
+  const dayVals = Object.values(dayAgg);
+  const prKcal = dayVals.length ? Math.max(...dayVals.map(d => d.kcal)) : null;
+  const prMin = dayVals.length ? Math.max(...dayVals.map(d => d.min)) : null;
+  const prStreak = longestStreak() || null;
+  const prItem = (label, v, unit) => `<div class="pr-i">
+      <div class="pr-label">${label}</div>
+      <div class="pr-v">${v === null ? '<span class="no-data">--</span>'
+        : `<span data-count="${Math.round(v)}" data-group="1">${grp(v)}</span><em>${unit}</em>`}</div>
+    </div>`;
   $('#app').innerHTML = `
     <div class="page-head">
       <h1>训练数据</h1>
@@ -1133,6 +1248,14 @@ function renderStats() {
       ${metricCard('今日训练', todayCount, '次', { emptyZero: true })}
     </div>
     <div class="stats-dash">
+      <div class="card span-2 pr-card">
+        <h3><span class="pr-trophy">🏆</span>个人纪录 PR</h3>
+        <div class="pr-grid">
+          ${prItem('最高单次耗能', prKcal, 'kcal')}
+          ${prItem('最长连续打卡', prStreak, '天')}
+          ${prItem('最长单日训练', prMin, '分钟')}
+        </div>
+      </div>
       <div class="card rw-share-today" data-rw="share-today">
         <span class="st-ic">🏅</span>
         <span><b>生成训练海报</b><small>${records.some(r => r.date === today) ? '今日数据已就绪 · 生成分享卡片' : '完成今日训练后即可生成'}</small></span>
@@ -1145,19 +1268,27 @@ function renderStats() {
         <h3>训练热力图（近一年）</h3>
         ${RewardsModule.heatmapHTML()}
       </div>
-      <div class="card"><h3>近 7 天耗能</h3>
-        <div class="chart">${weekData.map(x => `
-          <div class="col"><i style="height:${Math.round(x.kcal / maxK * 88)}%" title="${x.kcal}"></i><em>${x.d.slice(5).replace('-', '/')}</em></div>`).join('')}
+      <div class="card span-2"><h3>近 7 天耗能</h3>
+        <div class="chart-host" id="weekChartHost">${barChartSVG('wk7',
+          weekData.map(x => ({ x: x.d.slice(5).replace('-', '/'), v: x.kcal })),
+          { aria: '近 7 天耗能柱状图' })}
         </div>
       </div>
       <div class="card"><h3>${y} 年 ${m + 1} 月</h3><div class="cal">${cal}</div></div>
       <div class="card span-2"><h3>最近记录</h3>
         ${recent.length ? recent.map(r => `
           <div class="rec">
-            <div class="ri"><b>${esc(r.planTitle)}</b><span>${r.date} · ${r.minutes} 分钟 · ${r.doneCount}/${r.total} 动作</span></div>
-            <b class="rec-kcal">${grp(r.kcal)} 千卡</b>
-            <span class="share-link" data-rw="share-date" data-date="${r.date}">海报</span>
-            <span class="del" data-del="${r.id}">删除</span>
+            <div class="rec-main">
+              <b class="rec-title">${esc(r.planTitle)}</b>
+              <span class="rec-meta">${r.date} · ${r.doneCount}/${r.total} 动作
+                <span class="share-link" data-rw="share-date" data-date="${r.date}">海报</span>
+                <span class="del" data-del="${r.id}">删除</span>
+              </span>
+            </div>
+            <div class="rec-data">
+              <div class="rd-main"><b>${grp(r.kcal)}</b><i>千卡</i></div>
+              <div class="rd-sub">${r.minutes} 分钟</div>
+            </div>
           </div>`).join('') : emptyHTML('record', '还没有训练记录', '完成第一次训练后，数据会出现在这里',
             '<button class="btn" id="statsEmptyCta">去开始第一次训练</button>')}
       </div>
@@ -1169,6 +1300,11 @@ function renderStats() {
   }));
   const emptyCta = $('#statsEmptyCta');
   if (emptyCta) emptyCta.addEventListener('click', () => showTab('plan'));
+  const chartHost = $('#weekChartHost');
+  if (chartHost) ChartTip.bind(chartHost, i => ({
+    date: weekData[i].d,
+    rows: [{ c: 'var(--primary)', t: '耗能', v: grp(weekData[i].kcal) + ' 千卡' }]
+  }));
   runCountUps();
 }
 
@@ -1285,7 +1421,7 @@ function renderMine() {
     </div>
     <div class="card">
       <h3>关于轻练</h3>
-      <p class="muted">轻练 · 合理健身网站版 v1.9.0</p>
+      <p class="muted">轻练 · 合理健身网站版 v2.0.0</p>
       <p class="muted" style="margin-top:4px">数据默认保存在本机浏览器；登录账号后可云同步到服务器，随时换设备恢复。</p>
     </div>
     </div>

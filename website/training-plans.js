@@ -371,11 +371,11 @@
               const thumb = typeof thumbFor === 'function' ? thumbFor(n) : '';
               return `<button type="button" class="tps-row ${sess.done.includes(i) ? 'done' : ''}" data-tp="tp-row" data-i="${i}">
                 ${thumb ? `<span class="ex-thumb"><img loading="lazy" src="${thumb}" alt=""></span>` : '<span class="tps-noimg"></span>'}
-                <span class="tps-info">
-                  <span class="tps-n">${esc(n)}</span>
-                  <span class="tps-v">${sets} × ${esc(reps)} · 休 ${rest || 0} 秒</span>
+                <span class="tps-n">${esc(n)}</span>
+                <span class="tps-v">${sets} × ${esc(reps)}<em>·休${rest || 0}″</em></span>
+                <span class="tps-state" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" width="15" height="15"><path d="M5 12.5l4.2 4.2L19 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
                 </span>
-                <span class="tps-state">✓</span>
               </button>`;
             }).join('')}
           </div>
