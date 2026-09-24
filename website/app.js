@@ -386,7 +386,6 @@ function renderHome() {
   const weekCount = records.filter(r => r.date >= addDays(todayStr(), -6)).length;
   const plan = calcPlan(profile);
   const pct = Math.min(100, Math.round(weekKcal / (plan.target * 0.2 || 1) * 100));
-  const hot = PLANS.slice(0, 3);
   $('#app').innerHTML = `
     <div class="page-head">
       <h1>${greeting()}，${esc(profile.nickname)}</h1>
@@ -408,8 +407,8 @@ function renderHome() {
       <div class="gs"><b>${records.length}</b><span>总次数</span></div>
       <div class="gs"><b>${records.reduce((s, r) => s + r.kcal, 0)}</b><span>总千卡</span></div>
     </div>
-    <div class="section-title"><h2>今日推荐</h2><a data-nav="plan">更多 ›</a></div>
-    ${recommendPlan()}
+    <div class="section-title"><h2>今日训练</h2><a data-nav="plan">课表 ›</a></div>
+    ${PlanModule.todayCard()}
     <div class="section-title"><h2>快捷入口</h2></div>
     <div class="quick q5">
       <div class="q" data-lib><i>📚</i>动作库</div>
@@ -419,7 +418,7 @@ function renderHome() {
       <div class="q" data-nav="mine"><i>👤</i>个人中心</div>
     </div>
     <div class="section-title"><h2>热门计划</h2><a data-nav="plan">全部 ›</a></div>
-    ${hot.map(p => planCard(p)).join('')}
+    ${PlanModule.plans.slice(0, 3).map(PlanModule.planCardHTML).join('')}
     <div class="tips"><span>💡</span><p>${esc(GOAL_TIPS[profile.goal])}。健身贵在坚持，微小的习惯长期复利。</p></div>
   `;
   bindPlanCards();
@@ -448,20 +447,7 @@ function bindPlanCards() {
 /* ================= 计划页 ================= */
 let planFilter = '全部';
 function renderPlan() {
-  const goals = ['全部', ...GOALS];
-  const list = PLANS.filter(p => planFilter === '全部' || p.goal === planFilter);
-  $('#app').innerHTML = `
-    <div class="page-head"><h1>训练计划</h1><p>${PLANS.length} 套专业计划 · 按目标筛选 · 一键开练</p></div>
-    <button class="lib-entry" type="button" data-lib>
-      <span class="le-ic">📚</span>
-      <span class="le-tx"><b>动作库</b><small>43 个标准动作 · GIF 演示 · 部位与器械说明</small></span>
-      <span class="le-go">浏览 ›</span>
-    </button>
-    <div class="chips">${goals.map(g => `<span class="chip ${planFilter === g ? 'active' : ''}" data-g="${g}">${g}</span>`).join('')}</div>
-    <div style="margin-top:12px">${list.map(planCard).join('') || '<div class="empty"><i>🤸</i>该目标下暂无计划</div>'}</div>
-  `;
-  $$('#app .chip').forEach(c => c.addEventListener('click', () => { planFilter = c.dataset.g; renderPlan(); }));
-  bindPlanCards();
+  PlanModule.renderList();
 }
 
 /* ================= 训练页（子页） =================
