@@ -167,10 +167,10 @@
       </div>
       <div class="sp-body run-body">
         <div class="run-stats">
-          <div class="rs-i"><div class="rs-v" id="runTime">00:00</div><div class="rs-l">时长</div></div>
-          <div class="rs-i"><div class="rs-v" id="runKm">0.00</div><div class="rs-l">公里</div></div>
-          <div class="rs-i"><div class="rs-v" id="runPace">--</div><div class="rs-l">配速 /km</div></div>
-          <div class="rs-i"><div class="rs-v" id="runKcal">0</div><div class="rs-l">千卡</div></div>
+          <div class="rstat-i"><div class="rstat-v" id="runTime">00:00</div><div class="rstat-l">时长</div></div>
+          <div class="rstat-i"><div class="rstat-v" id="runKm">0.00</div><div class="rstat-l">公里</div></div>
+          <div class="rstat-i"><div class="rstat-v" id="runPace">--</div><div class="rstat-l">配速 /km</div></div>
+          <div class="rstat-i"><div class="rstat-v" id="runKcal">0</div><div class="rstat-l">千卡</div></div>
         </div>
         <p class="run-gps-msg" id="runGpsMsg" hidden></p>
         <div class="run-map-card">
