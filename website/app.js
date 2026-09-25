@@ -594,18 +594,33 @@ function recordsSegHTML() {
     <span class="rs-i ${recordsView === 'diet' ? 'on' : ''}" data-rvseg="diet" role="tab" aria-selected="${recordsView === 'diet'}">🥗 饮食记录</span>
   </div>`;
 }
-// 切换训练/饮食记录：下一帧再渲染重内容，分段条选中态先即时响应；dir 1=新内容自右滑入
+// 切换训练/饮食记录：旧内容按方向滑出淡出 → 交换内容 → 新内容滑入淡入；分段条选中态先即时响应
+// dir 1=新内容自右滑入（旧内容向左退出）
 function switchRecordsView(v, dir) {
+  if (recordsView === v) return;
   recordsView = v;
   document.body.dataset.rv = v;
-  requestAnimationFrame(() => {
+  const app = $('#app');
+  // 分段条选中态即时响应（不等待动画）
+  app.querySelectorAll('[data-rvseg]').forEach(s => {
+    const on = s.dataset.rvseg === v;
+    s.classList.toggle('on', on);
+    s.setAttribute('aria-selected', on);
+  });
+  clearTimeout(app._rvTimer);
+  app.classList.remove('rv-in', 'rv-out-l', 'rv-out-r');
+  void app.offsetWidth;
+  app.classList.add(dir > 0 ? 'rv-out-r' : 'rv-out-l');
+  // 旧内容退出完成后交换内容并让新内容滑入
+  app._rvTimer = setTimeout(() => {
     if (v === 'diet') renderDiet();
     else renderStats();
-    const app = $('#app');
-    app.classList.remove('slide-l', 'slide-r');
-    void app.offsetWidth;
-    app.classList.add(dir > 0 ? 'slide-l' : 'slide-r');
-  });
+    const a2 = $('#app');
+    a2.scrollTop = 0;
+    a2.classList.remove('rv-out-l', 'rv-out-r', 'rv-in', 'rv-in-r', 'rv-in-l');
+    void a2.offsetWidth;
+    a2.classList.add('rv-in', dir > 0 ? 'rv-in-r' : 'rv-in-l');
+  }, 150);
 }
 document.addEventListener('click', e => {
   const seg = e.target.closest('[data-rvseg]');
@@ -1507,6 +1522,16 @@ function genderMeta() {
     : { color: '#ec4899', bg: 'rgba(236,72,153,.10)', paths: '<circle cx="12" cy="8.5" r="4.5"/><path d="M12 13v6.5"/><path d="M8.5 16.5h7"/>' };
 }
 const GO_ARROW_SVG = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--primary)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9.2 4.6 16.6 12l-7.4 7.4"/></svg>';
+/* 训练偏好简约线性图标（单色描边，跟随次级文字色） */
+function pIcon(inner) {
+  return '<svg class="p-ic" viewBox="0 0 24 24" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + inner + '</svg>';
+}
+const PREF_ICONS = {
+  sound: pIcon('<path d="M4 9.5v5h3.5L13 19V5L7.5 9.5H4z"/><path d="M16 9.2a4 4 0 0 1 0 5.6"/>'),
+  vibrate: pIcon('<rect x="8.5" y="3.5" width="7" height="17" rx="2"/><path d="M4.5 8.5 3 12l1.5 3.5M19.5 8.5 21 12l-1.5 3.5"/>'),
+  rest: pIcon('<circle cx="12" cy="13" r="7.5"/><path d="M12 13l3-2.5M9.2 3.5h5.6"/>'),
+  font: pIcon('<path d="M4.5 19.5 10 6l5.5 13.5M6.8 14h6.4"/>')
+};
 function renderMine() {
   const bmi = bmiInfo();
   const totalK = records.reduce((s, r) => s + r.kcal, 0);
@@ -1600,26 +1625,26 @@ function renderMine() {
       <p class="muted set-foot">训练记录、饮食数据、身体档案保存在本机；登录后同步到服务器，换设备可恢复。</p>
 
       <div class="set-sub">外观</div>
-      <div class="goal-opts">${['auto', 'light', 'dark'].map(t => `<span class="chip ${theme === t ? 'active' : ''}" data-theme="${t}">${t === 'auto' ? '🌓' : t === 'dark' ? '🌙' : '☀️'} ${THEME_LABELS[t]}</span>`).join('')}</div>
+      <div class="goal-opts">${['auto', 'light', 'dark'].map(t => `<span class="chip ${theme === t ? 'active' : ''}" data-theme="${t}">${THEME_LABELS[t]}</span>`).join('')}</div>
       <p class="muted set-line">当前：${theme === 'auto' ? (systemDark() ? '跟随系统（深色）' : '跟随系统（浅色）') : THEME_LABELS[theme]}</p>
 
       <div class="set-sub">训练偏好</div>
-      <div class="set-row"><span>🔊 提示音</span>
+      <div class="set-row"><span>${PREF_ICONS.sound}提示音</span>
         <span class="seg">
           <span class="seg-i ${settings.sound ? 'on' : ''}" data-set="sound" data-v="1">开</span>
           <span class="seg-i ${!settings.sound ? 'on' : ''}" data-set="sound" data-v="0">关</span>
         </span>
       </div>
-      <div class="set-row"><span>📳 震动反馈</span>
+      <div class="set-row"><span>${PREF_ICONS.vibrate}震动反馈</span>
         <span class="seg">
           <span class="seg-i ${settings.vibrate ? 'on' : ''}" data-set="vibrate" data-v="1">开</span>
           <span class="seg-i ${!settings.vibrate ? 'on' : ''}" data-set="vibrate" data-v="0">关</span>
         </span>
       </div>
-      <div class="set-row"><span>⏱ 休息时长</span>
+      <div class="set-row"><span>${PREF_ICONS.rest}休息时长</span>
         <span class="seg">${[30, 45, 60].map(s => `<span class="seg-i ${settings.restSec === s ? 'on' : ''}" data-set="restSec" data-v="${s}">${s}秒</span>`).join('')}</span>
       </div>
-      <div class="set-row"><span>🔍 字体大小</span>
+      <div class="set-row"><span>${PREF_ICONS.font}字体大小</span>
         <span class="seg">${['normal', 'large', 'xlarge'].map(f => `<span class="seg-i ${settings.fs === f ? 'on' : ''}" data-set="fs" data-v="${f}">${f === 'normal' ? '标准' : f === 'large' ? '大' : '超大'}</span>`).join('')}</span>
       </div>
       <p class="muted set-line">首次训练点「开始」即激活声音；浏览器询问通知权限时点「允许」，锁屏时休息结束也能收到提醒。</p>

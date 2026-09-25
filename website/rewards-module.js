@@ -312,10 +312,17 @@
     const perm = ('Notification' in window) ? Notification.permission : 'unsupported';
     const warn = perm === 'denied' ? '<p class="muted rw-warn">通知权限被浏览器拒绝，请在地址栏左侧站点设置中允许通知</p>'
       : perm === 'unsupported' ? '<p class="muted rw-warn">当前浏览器不支持通知</p>' : '';
+    // iPhone 仅在“添加到主屏幕”的 PWA 模式下支持网页通知
+    const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isStandalone = navigator.standalone === true ||
+      (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    const iosWarn = (isIOS && !isStandalone)
+      ? '<p class="muted rw-warn">iPhone 请先把肌肉会飞「添加到主屏幕」，从桌面图标打开后开启提醒最可靠</p>' : '';
     return `
       <div class="rw-remind">
         <div class="rw-switch-row">
-          <span><b>🔔 训练提醒</b><small>到点提醒"该训练啦"</small></span>
+          <span><b>训练提醒</b><small>到点提醒"该训练啦"</small></span>
           <span class="rw-switch ${r.on ? 'on' : ''}" data-rw="remind-on" role="switch"
             aria-checked="${r.on}" tabindex="0"></span>
         </div>
@@ -323,27 +330,42 @@
           <span>每日提醒时间</span>
           <input type="time" id="remindTime" value="${r.time}" data-rw="remind-time">
         </div>
-        ${warn}
-        <p class="muted rw-note">浏览器或网页保持打开时到点提醒；锁屏也能收到系统通知。</p>
+        ${warn}${iosWarn}
+        <p class="muted rw-note">App 保持打开时到点提醒；错过时间只要当天打开手机就会立即补发，锁屏也能收到系统通知。</p>
       </div>`;
   }
-  let firedDate = '', remindIv = null;
+  let firedDate = '', remindIv = null, preciseT = null;
   function startReminder() {
     clearInterval(remindIv);
     remindIv = setInterval(checkRemind, 20000);
     checkRemind();
   }
+  // 今日提醒时刻的时间戳
+  function remindTargetTs(r) {
+    const d = new Date();
+    d.setHours(+r.time.slice(0, 2), +r.time.slice(3, 5), 0, 0);
+    return d.getTime();
+  }
   function checkRemind() {
     const r = ensureRemindCfg();
-    if (!r.on) return;
-    const d = new Date();
-    const hhmm = pad(d.getHours()) + ':' + pad(d.getMinutes());
+    if (!r.on) { clearTimeout(preciseT); preciseT = null; return; }
+    const now = Date.now();
     const ds = todayStr();
-    if (hhmm === r.time && firedDate !== ds) {
-      firedDate = ds;
-      fireRemind();
-    }
     if (firedDate && firedDate !== ds) firedDate = '';
+    const target = remindTargetTs(r);
+    // 已过点但今天还没提醒（App 被挂后台/锁屏错过整分钟）：立即补发，不再依赖整分钟字符串匹配
+    if (now >= target && firedDate !== ds) {
+      firedDate = ds;
+      clearTimeout(preciseT); preciseT = null;
+      fireRemind();
+      return;
+    }
+    // 距提醒 60 秒内：精确 setTimeout 准点触发，比 20s 轮询更可靠
+    const left = target - now;
+    if (left > 0 && left <= 60000) {
+      clearTimeout(preciseT);
+      preciseT = setTimeout(checkRemind, left + 300);
+    }
   }
   async function fireRemind() {
     const title = '该训练啦 💪';
@@ -441,8 +463,13 @@
       r.time = e.target.value || '19:00';
       saveSettings();
       toast('提醒时间已设为 ' + r.time);
+      checkRemind();
     }
   });
+  // 从后台/锁屏切回、页面重新显示或窗口获得焦点时立即检查，补发错过的提醒
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) checkRemind(); });
+  window.addEventListener('pageshow', checkRemind);
+  window.addEventListener('focus', checkRemind);
   // 开关键盘可达
   document.addEventListener('keydown', (e) => {
     if ((e.key === ' ' || e.key === 'Enter') && e.target.classList && e.target.classList.contains('rw-switch')) {
