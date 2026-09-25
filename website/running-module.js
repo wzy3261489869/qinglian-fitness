@@ -342,11 +342,11 @@
   }
 
   /* ---------------- 户外 tab 主页 ---------------- */
-  /* 图标统一规范：24×24，stroke 1.8，round，重心居中 */
-  const ICON_RUN = `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="14.6" cy="4.6" r="1.8"/><path d="M13.4 7.6 10.8 12.2"/><path d="M13.2 8.4 16.6 9.6 15.2 11.8"/><path d="M12.4 8.4 9.2 9.8 8.2 12.2"/><path d="M10.8 12.2 14 13.4 15.4 17"/><path d="M10.8 12.2 7.6 15.2 5.8 20"/></svg>`;
-  const ICON_WALK = `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4.8" r="1.8"/><path d="M12 7.6 11.4 13"/><path d="M12.2 8.8 14 11.8"/><path d="M11.6 8.8 9.6 11.4"/><path d="M11.4 13 14 16.2 15 20"/><path d="M11.4 13 9 16.4 7.2 20"/></svg>`;
-  const ICON_BIKE = `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17.4" r="3.4"/><circle cx="18" cy="17.4" r="3.4"/><path d="M6 17.4 10.2 10.8 15.2 9.6"/><path d="M15.2 9.6 18 17.4"/><path d="M10.2 10.8 12 15 6 17.4"/><path d="M14.3 9.2h1.8"/></svg>`;
-  const ICON_HIKE = `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="16.8" cy="5.6" r="1.5"/><path d="m3.4 19 5.7-9.2 3.7 5.3 2.2-3.5L20.6 19z"/></svg>`;
+  /* 图标统一规范：24×24，stroke 1.8，round，重心居中，放大至 28px */
+  const ICON_RUN = `<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.6" cy="4.9" r="1.7"/><path d="M12.5 7.7 10.3 12.3"/><path d="M12.7 8.5 15.9 9.5 14.6 11.7"/><path d="M11.9 8.3 8.7 9.5 7.7 11.9"/><path d="M10.3 12.3 13.5 13.1 14.8 16.9"/><path d="M10.3 12.3 7.1 15.1 5.3 19.7"/></svg>`;
+  const ICON_WALK = `<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4.9" r="1.7"/><path d="M12 7.7 11.3 13.2"/><path d="M12.2 8.9 14.1 12"/><path d="M11.6 8.9 9.5 11.6"/><path d="M11.3 13.2 14 16.4 15 20.2"/><path d="M11.3 13.2 8.9 16.6 7 20.2"/></svg>`;
+  const ICON_BIKE = `<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.2" cy="17.2" r="3.2"/><circle cx="17.8" cy="17.2" r="3.2"/><path d="M6.2 17.2 9.8 10.6 14.8 9.8"/><path d="M14.8 9.8 17.8 17.2"/><path d="M9.8 10.6 11.7 14.6 6.2 17.2"/><path d="M13.9 8.9h1.8"/></svg>`;
+  const ICON_HIKE = `<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="16.8" cy="5.6" r="1.5"/><path d="m3.4 19 5.7-9.2 3.7 5.3 2.2-3.5L20.6 19z"/></svg>`;
 
   const TAG_TXT = { run: '跑步', walk: '健走', ride: '骑行', hike: '徒步' };
   function historyHTML() {
