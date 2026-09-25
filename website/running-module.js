@@ -13,8 +13,10 @@
   const BRAND = '#00b578';      // 轨迹主色：软件品牌绿
   const FINISH = '#ff7a1a';     // 终点色
   const MODES = {
-    run:  { title: '户外跑步', startText: '开始跑步', kcalK: 1.036, vMax: 12 },
-    ride: { title: '户外骑行', startText: '开始骑行', kcalK: 0.40,  vMax: 25 }
+    run:  { title: '户外跑步', startText: '开始跑步', kcalK: 1.036, vMax: 12, pace: true },
+    walk: { title: '户外健走', startText: '开始健走', kcalK: 0.45,  vMax: 5,  pace: true },
+    ride: { title: '户外骑行', startText: '开始骑行', kcalK: 0.40,  vMax: 25, pace: false },
+    hike: { title: '户外徒步', startText: '开始徒步', kcalK: 0.60,  vMax: 7,  pace: true }
   };
 
   let sess = null;          // { mode, elapsed, runStart, running, points, distance }
@@ -340,15 +342,19 @@
   }
 
   /* ---------------- 户外 tab 主页 ---------------- */
-  const ICON_RUN = `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="14.2" cy="4.8" r="1.9"/><path d="M9.2 20l2.2-4.4-2.8-3 1.8-3.4 3.4 1.8 2.8-.8"/><path d="m10.4 9.2 2.2 3 3 .8M8.6 12.6 6.8 16.4"/></svg>`;
-  const ICON_BIKE = `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17" r="3.1"/><circle cx="18" cy="17" r="3.1"/><path d="M6 17l3.4-6.8h5.2L18 17"/><path d="M9.4 10.2 11 7h2.6M12.8 13.2l1.4-3"/></svg>`;
+  /* 图标统一规范：24×24，stroke 1.8，round，重心居中 */
+  const ICON_RUN = `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="14.6" cy="4.6" r="1.8"/><path d="M13.4 7.6 10.8 12.2"/><path d="M13.2 8.4 16.6 9.6 15.2 11.8"/><path d="M12.4 8.4 9.2 9.8 8.2 12.2"/><path d="M10.8 12.2 14 13.4 15.4 17"/><path d="M10.8 12.2 7.6 15.2 5.8 20"/></svg>`;
+  const ICON_WALK = `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4.8" r="1.8"/><path d="M12 7.6 11.4 13"/><path d="M12.2 8.8 14 11.8"/><path d="M11.6 8.8 9.6 11.4"/><path d="M11.4 13 14 16.2 15 20"/><path d="M11.4 13 9 16.4 7.2 20"/></svg>`;
+  const ICON_BIKE = `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="17.4" r="3.4"/><circle cx="18" cy="17.4" r="3.4"/><path d="M6 17.4 10.2 10.8 15.2 9.6"/><path d="M15.2 9.6 18 17.4"/><path d="M10.2 10.8 12 15 6 17.4"/><path d="M14.3 9.2h1.8"/></svg>`;
+  const ICON_HIKE = `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="16.8" cy="5.6" r="1.5"/><path d="m3.4 19 5.7-9.2 3.7 5.3 2.2-3.5L20.6 19z"/></svg>`;
 
+  const TAG_TXT = { run: '跑步', walk: '健走', ride: '骑行', hike: '徒步' };
   function historyHTML() {
-    const list = records.filter(r => r.type === 'run' || r.type === 'ride').slice(0, 8);
-    if (!list.length) return '<div class="empty" style="padding:24px 16px">还没有户外运动记录<br>选择跑步或骑行，开始第一次吧</div>';
+    const list = records.filter(r => TAG_TXT[r.type]).slice(0, 8);
+    if (!list.length) return '<div class="empty" style="padding:24px 16px">还没有户外运动记录<br>选择一项运动，开始第一次吧</div>';
     return list.map(r => `
       <div class="od-hi">
-        <span class="od-tag ${r.type}">${r.type === 'ride' ? '骑行' : '跑步'}</span>
+        <span class="od-tag ${r.type}">${TAG_TXT[r.type]}</span>
         <b class="od-hi-km">${r.distanceKm != null ? r.distanceKm.toFixed(2) : '--'} <i>km</i></b>
         <span class="od-hi-r"><b>${r.minutes} <i>分钟</i></b><small>${r.date.slice(5)}</small></span>
       </div>`).join('');
@@ -361,16 +367,22 @@
           <h1>户外运动</h1>
           <p>GPS 实时轨迹 · 里程、配速与卡路里自动记录</p>
         </div>
-        <div class="od-picks">
-          <button class="od-pick" data-od="start" data-mode="run">
+        <div class="od-grid">
+          <button class="od-tile" data-od="start" data-mode="run">
             <span class="od-ic run">${ICON_RUN}</span>
-            <span class="od-tx"><b>跑步</b><small>实时配速 · GPS 轨迹</small></span>
-            <span class="od-go" aria-hidden="true">›</span>
+            <b>跑步</b><small>实时配速</small>
           </button>
-          <button class="od-pick" data-od="start" data-mode="ride">
+          <button class="od-tile" data-od="start" data-mode="walk">
+            <span class="od-ic walk">${ICON_WALK}</span>
+            <b>健走</b><small>轻松燃脂</small>
+          </button>
+          <button class="od-tile" data-od="start" data-mode="ride">
             <span class="od-ic ride">${ICON_BIKE}</span>
-            <span class="od-tx"><b>骑行</b><small>均速里程 · GPS 轨迹</small></span>
-            <span class="od-go" aria-hidden="true">›</span>
+            <b>骑行</b><small>均速里程</small>
+          </button>
+          <button class="od-tile" data-od="start" data-mode="hike">
+            <span class="od-ic hike">${ICON_HIKE}</span>
+            <b>徒步</b><small>山野探索</small>
           </button>
         </div>
         <div class="card">

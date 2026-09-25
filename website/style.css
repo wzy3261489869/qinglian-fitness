@@ -2151,31 +2151,34 @@ body.sheet-open { overflow: hidden; }
 .bd-li { display: none; }
 
 /* ============================================================
-   户外运动 tab（跑步 / 骑行选择 + 最近户外记录）
+   户外运动 tab（四宫格模式选择 + 最近户外记录）
    ============================================================ */
 .od-page { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
-.od-picks { display: grid; gap: 12px; margin: 4px 0 20px; }
-.od-pick {
-  display: flex; align-items: center; gap: 14px;
-  width: 100%; padding: 16px; text-align: left; cursor: pointer;
+.od-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  margin: 4px 0 20px;
+}
+.od-tile {
+  display: flex; flex-direction: column; align-items: flex-start;
+  gap: 2px; padding: 16px; cursor: pointer;
   background: var(--bg-card); border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 16px; text-align: left;
   transition: transform .12s var(--ease), border-color .2s var(--ease);
 }
-.od-pick:active { transform: scale(.975); border-color: rgba(0, 181, 120, .35); }
+.od-tile:active { transform: scale(.965); border-color: rgba(0, 181, 120, .35); }
 .od-ic {
-  flex-shrink: 0; width: 46px; height: 46px; border-radius: 13px;
+  width: 48px; height: 48px; border-radius: 14px;
   display: flex; align-items: center; justify-content: center;
+  margin-bottom: 10px;
 }
+.od-tile b { font-size: 15px; font-weight: 600; color: var(--text-1); line-height: 1.3; }
+.od-tile small { font-size: 12px; color: var(--text-3); line-height: 1.3; }
+
+/* 四种模式柔和主题色（图标容器 + 历史标签同色） */
 .od-ic.run  { background: rgba(0, 181, 120, .12); color: var(--primary); }
+.od-ic.walk { background: rgba(6, 182, 212, .12); color: #06b6d4; }
 .od-ic.ride { background: rgba(22, 93, 255, .1);  color: #165dff; }
-.od-tx { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.od-tx b { font-size: 17px; font-weight: 600; color: var(--text-1); }
-.od-tx small { font-size: 13px; color: var(--text-3); }
-.od-go {
-  flex-shrink: 0; font-size: 24px; line-height: 1;
-  color: var(--text-3); font-weight: 300;
-}
+.od-ic.hike { background: rgba(217, 119, 6, .12); color: #d97706; }
 
 /* 最近户外运动列表 */
 .od-hi {
@@ -2189,7 +2192,9 @@ body.sheet-open { overflow: hidden; }
   padding: 3px 10px; border-radius: var(--r-pill);
 }
 .od-tag.run  { color: var(--primary); background: rgba(0, 181, 120, .12); }
+.od-tag.walk { color: #06b6d4; background: rgba(6, 182, 212, .12); }
 .od-tag.ride { color: #165dff; background: rgba(22, 93, 255, .1); }
+.od-tag.hike { color: #d97706; background: rgba(217, 119, 6, .12); }
 .od-hi-km {
   font-size: 15px; font-weight: 600; color: var(--text-1);
   font-variant-numeric: tabular-nums;
