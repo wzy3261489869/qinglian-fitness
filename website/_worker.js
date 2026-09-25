@@ -7,18 +7,25 @@ import crypto from 'node:crypto';
 
 const app = new Hono();
 
-let _sql = null;
+let _sql = null, _rawSql = null;
 function getSql(env) {
-  if (!_sql && env.DATABASE_URL) _sql = wrapRetry(neon(env.DATABASE_URL));
+  if (!_sql && env.DATABASE_URL) {
+    _rawSql = neon(env.DATABASE_URL);
+    _sql = wrapRetry(_rawSql);
+  }
   return _sql;
+}
+// 事务批量：多个查询合并为一次 HTTPS 往返（外层包超时+重试）
+function batchTx(queries) {
+  return dbRetry(() => _rawSql.transaction(queries));
 }
 
 // Neon serverless 查询走 HTTPS fetch，但 Workers 出站 fetch 默认无超时，
-// 且每个新 Worker 实例首连 Cloudflare→Neon 链路实测需 10-20 秒激活（激活后毫秒级）。
-// 策略：每次查询 8s 硬超时，失败最多重试 2 次（间隔 1s）——首轮激活链路，后续成功。
-// 最坏路径 8+1+8+1+8=26s，前端登录超时已放宽到 32s，保证用户能等到成功结果。
+// 且每个新 Worker 实例首连 Cloudflare→Neon 链路实测需 6-18 秒激活（激活后毫秒级）。
+// 策略：每次查询 6s 硬超时，失败最多重试 2 次（间隔 1s）——首轮激活链路，后续成功。
+// 最坏路径 6+1+6+1+6=20s，前端登录超时 22s，保证用户能等到成功结果。
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const QUERY_TIMEOUT = 8000;
+const QUERY_TIMEOUT = 6000;
 function withTimeout(promise) {
   return Promise.race([
     promise,
@@ -46,10 +53,18 @@ function wrapRetry(rawSql) {
   });
 }
 
-async function ensureTables(sql) {
-  await sql`CREATE TABLE IF NOT EXISTS users(username TEXT PRIMARY KEY, salt TEXT NOT NULL, hash TEXT NOT NULL, created_at BIGINT NOT NULL)`;
-  await sql`CREATE TABLE IF NOT EXISTS tokens(token TEXT PRIMARY KEY, username TEXT NOT NULL, created_at BIGINT NOT NULL)`;
-  await sql`CREATE TABLE IF NOT EXISTS userdata(username TEXT PRIMARY KEY, data JSONB NOT NULL, synced_at BIGINT NOT NULL)`;
+// 建表：每个 Worker 实例只跑一次（DDL 三语句合并为单条事务请求）；
+// 登录路径完全不调用——能登录说明表必然存在，省掉每轮登录 3 次串行往返。
+let _ensured = null;
+function ensureTables(sql) {
+  if (!_ensured) {
+    _ensured = batchTx([
+      _rawSql`CREATE TABLE IF NOT EXISTS users(username TEXT PRIMARY KEY, salt TEXT NOT NULL, hash TEXT NOT NULL, created_at BIGINT NOT NULL)`,
+      _rawSql`CREATE TABLE IF NOT EXISTS tokens(token TEXT PRIMARY KEY, username TEXT NOT NULL, created_at BIGINT NOT NULL)`,
+      _rawSql`CREATE TABLE IF NOT EXISTS userdata(username TEXT PRIMARY KEY, data JSONB NOT NULL, synced_at BIGINT NOT NULL)`
+    ]).catch((e) => { _ensured = null; throw e; });
+  }
+  return _ensured;
 }
 
 function hashPassword(password, salt) {
@@ -74,44 +89,62 @@ app.use('/api/*', async (c, next) => {
   await next();
 });
 
+// 解析登录标识：邮箱模式（loginType=email 或账号含 @）统一小写作为主键；
+// 邮箱本身可直接作为 users 主键（TEXT 列），旧用户名账号零迁移。
+function resolveAccount(body) {
+  const raw = String((body && body.username) || '').trim();
+  const isEmail = body.loginType === 'email' || raw.includes('@');
+  return { account: isEmail ? raw.toLowerCase() : raw, isEmail };
+}
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+
 app.post('/api/register', async (c) => {
   try {
     const body = await c.req.json();
-    const { username, password } = body || {};
-    if (!username || !password) return c.json({ ok: false, msg: '用户名和密码不能为空' });
-    if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) return c.json({ ok: false, msg: '用户名需为3-20位字母/数字/下划线' });
+    const { account, isEmail } = resolveAccount(body);
+    const password = body && body.password;
+    if (!account || !password) return c.json({ ok: false, msg: '账号和密码不能为空' });
+    if (isEmail) {
+      if (!EMAIL_RE.test(account) || account.length > 120) return c.json({ ok: false, msg: '邮箱格式不正确' });
+    } else {
+      if (!/^[a-zA-Z0-9_]{3,20}$/.test(account)) return c.json({ ok: false, msg: '用户名需为3-20位字母/数字/下划线' });
+    }
     if (String(password).length < 6) return c.json({ ok: false, msg: '密码至少6位' });
     const sql = getSql(c.env);
     if (!sql) return c.json({ ok: false, msg: '数据库未配置' });
     await ensureTables(sql);
-    const exists = await sql`SELECT username FROM users WHERE username=${username}`;
-    if (exists[0]) return c.json({ ok: false, msg: '用户名已存在' });
+    const exists = await sql`SELECT 1 AS x FROM users WHERE username=${account}`;
+    if (exists[0]) return c.json({ ok: false, msg: isEmail ? '该邮箱已注册，直接去登录吧' : '用户名已存在' });
     const salt = crypto.randomBytes(16).toString('hex');
     const hash = hashPassword(password, salt);
     const now = Date.now();
-    await sql`INSERT INTO users(username,salt,hash,created_at) VALUES(${username},${salt},${hash},${now})`;
     const token = crypto.randomBytes(32).toString('hex');
-    await sql`INSERT INTO tokens(token,username,created_at) VALUES(${token},${username},${now})`;
-    return c.json({ ok: true, token, username });
+    // 用户 + token 两条插入合并为一次往返
+    await batchTx([
+      _rawSql`INSERT INTO users(username,salt,hash,created_at) VALUES(${account},${salt},${hash},${now})`,
+      _rawSql`INSERT INTO tokens(token,username,created_at) VALUES(${token},${account},${now})`
+    ]);
+    return c.json({ ok: true, token, username: account });
   } catch (e) { return c.json({ ok: false, msg: '服务器错误', err: String(e && e.message || e) }); }
 });
 
 app.post('/api/login', async (c) => {
   try {
     const body = await c.req.json();
-    const { username, password } = body || {};
+    const { account, isEmail } = resolveAccount(body);
+    if (!account) return c.json({ ok: false, msg: '请输入账号' });
     const sql = getSql(c.env);
     if (!sql) return c.json({ ok: false, msg: '数据库未配置' });
-    await ensureTables(sql);
-    const rows = await sql`SELECT salt, hash FROM users WHERE username=${username}`;
+    // 登录不建表：最多 2 次数据库往返（查用户 → 写 token）
+    const rows = await sql`SELECT salt, hash FROM users WHERE username=${account}`;
     const u = rows[0];
-    if (!u || u.hash !== hashPassword(password || '', u.salt)) {
-      return c.json({ ok: false, msg: '用户名或密码错误' });
+    if (!u || u.hash !== hashPassword(body.password || '', u.salt)) {
+      return c.json({ ok: false, msg: isEmail ? '邮箱或密码错误' : '用户名或密码错误' });
     }
     const token = crypto.randomBytes(32).toString('hex');
     const now = Date.now();
-    await sql`INSERT INTO tokens(token,username,created_at) VALUES(${token},${username},${now})`;
-    return c.json({ ok: true, token, username });
+    await sql`INSERT INTO tokens(token,username,created_at) VALUES(${token},${account},${now})`;
+    return c.json({ ok: true, token, username: account });
   } catch (e) { return c.json({ ok: false, msg: '服务器错误', err: String(e && e.message || e) }); }
 });
 

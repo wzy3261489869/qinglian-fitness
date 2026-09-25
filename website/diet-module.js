@@ -54,8 +54,6 @@
     const cups = waterMap[viewDate] || 0;
     const byMeal = m => list.filter(e => e.meal === m);
 
-    if (!foods && !foodsErr) await loadFoods();
-
     $('#app').innerHTML = `
       <div class="page-head">
         <h1>饮食记录</h1>
@@ -279,36 +277,21 @@
     });
   }
 
-  /* ---------------- 弹窗：记录体重 ---------------- */
+  /* ---------------- 弹层：记录体重（与年龄/身高一致的数字滚轮） ---------------- */
   function openWeight() {
     const cur = weightMap[todayStr()] || profile.weight;
-    const wrap = document.createElement('div');
-    wrap.className = 'modal-mask';
-    wrap.innerHTML = `<div class="modal">
-      <h3>记录今日体重</h3>
-      <p class="muted">${todayStr()} · 目标体重 ${profile.targetWeight} kg</p>
-      <div class="weight-input"><input type="number" id="wInput" min="30" max="250" step="0.1" value="${cur}"><em>kg</em></div>
-      <p class="muted" style="margin-top:8px">建议晨起排便后、空腹称重，数据更稳定。</p>
-      <div class="modal-btns">
-        <button class="btn ghost" id="wCancel">取消</button>
-        <button class="btn mega" id="wSave">保存</button>
-      </div>
-    </div>`;
-    document.body.appendChild(wrap);
-    const close = () => wrap.remove();
-    $('#wCancel', wrap).addEventListener('click', close);
-    wrap.addEventListener('click', e => { if (e.target === wrap) close(); });
-    $('#wInput', wrap).focus();
-    $('#wSave', wrap).addEventListener('click', () => {
-      const v = parseFloat($('#wInput', wrap).value);
-      if (!(v >= 30 && v <= 250)) { toast('请输入 30-250kg 之间的体重'); return; }
-      weightMap[todayStr()] = +v.toFixed(1);
-      saveWeightMap();
-      profile.weight = +v.toFixed(1);
-      saveProfile();
-      close(); toast('体重已记录 · ' + v + 'kg');
-      renderMine();
-    });
+    openWheelSheet(
+      { title: '记录今日体重', unit: 'kg', min: 30, max: 200, step: 0.1, value: cur, dec: 1 },
+      v => {
+        v = +v.toFixed(1);
+        weightMap[todayStr()] = v;
+        saveWeightMap();
+        profile.weight = v;
+        saveProfile();
+        toast('体重已记录 · ' + v + 'kg');
+        renderMine();
+      }
+    );
   }
 
   /* ---------------- 我的页：体重 × 饮食双曲线 ---------------- */
@@ -622,5 +605,5 @@
   }
 
   /* ---------------- 对外 API ---------------- */
-  window.DietModule = { renderDiet, mountTrend, openWeight, loadFoods };
+  window.DietModule = { renderDiet, mountTrend, openWeight, loadFoods, prefetch: loadFoods };
 })();

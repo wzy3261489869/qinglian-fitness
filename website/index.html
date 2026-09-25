@@ -40,8 +40,12 @@
         <p>让肌肉飞起来 · 登录后开始使用</p>
       </div>
       <form class="lg-form" id="gateForm" autocomplete="on">
+        <div class="lg-authtype" id="gateAuthTypes" role="tablist">
+          <button type="button" class="at-i on" data-at="user" role="tab">用户名</button>
+          <button type="button" class="at-i" data-at="email" role="tab">邮箱</button>
+        </div>
         <div class="lg-field">
-          <label for="gateUser" class="lg-label">用户名</label>
+          <label for="gateUser" class="lg-label" id="gateUserLabel">用户名</label>
           <input id="gateUser" name="username" placeholder="3-20位字母/数字/下划线"
             autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false"
             enterkeyhint="next" maxlength="20" />
@@ -71,6 +75,7 @@
           <button type="submit" id="gateLoginBtn" class="lg-primary">登录</button>
           <button type="button" id="gateRegBtn" class="lg-secondary">注册</button>
         </div>
+        <button type="button" id="gateGuest" class="lg-guest">先随便逛逛（游客模式）</button>
         <p class="lg-note">注册后数据可云同步，换设备登录同一账号即可恢复全部记录</p>
       </form>
     </div>

@@ -594,14 +594,46 @@ function recordsSegHTML() {
     <span class="rs-i ${recordsView === 'diet' ? 'on' : ''}" data-rvseg="diet" role="tab" aria-selected="${recordsView === 'diet'}">🥗 饮食记录</span>
   </div>`;
 }
+// 切换训练/饮食记录：下一帧再渲染重内容，分段条选中态先即时响应；dir 1=新内容自右滑入
+function switchRecordsView(v, dir) {
+  recordsView = v;
+  document.body.dataset.rv = v;
+  requestAnimationFrame(() => {
+    if (v === 'diet') renderDiet();
+    else renderStats();
+    const app = $('#app');
+    app.classList.remove('slide-l', 'slide-r');
+    void app.offsetWidth;
+    app.classList.add(dir > 0 ? 'slide-l' : 'slide-r');
+  });
+}
 document.addEventListener('click', e => {
   const seg = e.target.closest('[data-rvseg]');
   if (!seg) return;
   const v = seg.dataset.rvseg;
   if (recordsView === v) return;
-  recordsView = v;
-  if (currentTab === 'stats') showTab('stats');
+  if (currentTab === 'stats') switchRecordsView(v, v === 'diet' ? 1 : -1);
 });
+// 左右滑动手势切换（仅在记录页、无弹层/子页时生效；要求横向位移明显大于纵向，避免与上下滚动冲突）
+let _tsX = 0, _tsY = 0, _tsOn = false;
+document.addEventListener('touchstart', e => {
+  _tsOn = currentTab === 'stats' && e.touches.length === 1 &&
+    !document.querySelector('.subpage.show') && !document.querySelector('.sheet-root');
+  if (!_tsOn) return;
+  _tsX = e.touches[0].clientX;
+  _tsY = e.touches[0].clientY;
+}, { passive: true });
+document.addEventListener('touchend', e => {
+  if (!_tsOn) return;
+  _tsOn = false;
+  const dx = e.changedTouches[0].clientX - _tsX;
+  const dy = e.changedTouches[0].clientY - _tsY;
+  if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+  // 向左滑 → 饮食；向右滑 → 训练
+  const want = dx < 0 ? 'diet' : 'train';
+  if (want === recordsView) return;
+  switchRecordsView(want, dx < 0 ? 1 : -1);
+}, { passive: true });
 
 /* ================= 路由 ================= */
 const TABS = ['home', 'plan', 'stats', 'mine'];
@@ -672,15 +704,6 @@ function renderHome() {
       ${metricCard('总千卡', totalKcal, 'kcal', { group: true, emptyZero: true })}
     </div>
     ${RewardsModule.encouragementHTML()}
-    <div class="section-title"><h2>快捷入口</h2></div>
-    <div class="quick q5">
-      <div class="q" data-run="start"><i>🏃</i>户外跑步</div>
-      <div class="q" data-lib><i>📚</i>动作库</div>
-      <div class="q" data-nav="plan"><i>💪</i>开始训练</div>
-      <div class="q" data-nav="stats" data-rv="diet"><i>🥗</i>饮食记录</div>
-      <div class="q" data-nav="stats" data-rv="train"><i>📊</i>数据统计</div>
-      <div class="q" data-nav="mine"><i>👤</i>个人中心</div>
-    </div>
     </div>
     <div class="tips"><span>💡</span><p>${esc(GOAL_TIPS[profile.goal])}。健身贵在坚持，微小的习惯长期复利。</p></div>
   `;
@@ -1553,12 +1576,34 @@ function renderMine() {
       <p class="muted" style="margin-top:12px">${esc(GOAL_TIPS[profile.goal])}</p>
     </div>
     <div class="card">
-      <h3>外观设置</h3>
+      <h3>设置</h3>
+      <div class="set-sub">账号与云同步</div>
+      ${auth.token ? `
+        <p class="set-account">👤 <b>${esc(auth.username)}</b> <span class="muted">· 已登录</span></p>
+        <div class="set-chips">
+          <span class="chip" id="cloudUploadBtn">☁️ 上传到云端</span>
+          <span class="chip" id="cloudDownloadBtn">⬇️ 从云端恢复</span>
+          <span class="chip" id="btnOut">退出登录</span>
+        </div>
+      ` : `
+        <input id="authUser" class="field-input" placeholder="用户名（3-20位字母数字）"
+          autocomplete="username" autocapitalize="none" spellcheck="false"/>
+        <p class="field-msg" id="authUserMsg" aria-live="polite"></p>
+        <input id="authPass" type="password" class="field-input" placeholder="密码（至少6位）"
+          autocomplete="current-password"/>
+        <p class="field-msg" id="authPassMsg" aria-live="polite"></p>
+        <div class="set-chips">
+          <span class="chip" id="authBtn" style="flex:1;justify-content:center">登录</span>
+          <span class="chip" id="authBtnReg" style="flex:1;justify-content:center">注册新账号</span>
+        </div>
+      `}
+      <p class="muted set-foot">训练记录、饮食数据、身体档案保存在本机；登录后同步到服务器，换设备可恢复。</p>
+
+      <div class="set-sub">外观</div>
       <div class="goal-opts">${['auto', 'light', 'dark'].map(t => `<span class="chip ${theme === t ? 'active' : ''}" data-theme="${t}">${t === 'auto' ? '🌓' : t === 'dark' ? '🌙' : '☀️'} ${THEME_LABELS[t]}</span>`).join('')}</div>
-      <p class="muted" style="margin-top:12px">当前：${theme === 'auto' ? (systemDark() ? '跟随系统（深色）' : '跟随系统（浅色）') : THEME_LABELS[theme]}</p>
-    </div>
-    <div class="card">
-      <h3>训练偏好</h3>
+      <p class="muted set-line">当前：${theme === 'auto' ? (systemDark() ? '跟随系统（深色）' : '跟随系统（浅色）') : THEME_LABELS[theme]}</p>
+
+      <div class="set-sub">训练偏好</div>
       <div class="set-row"><span>🔊 提示音</span>
         <span class="seg">
           <span class="seg-i ${settings.sound ? 'on' : ''}" data-set="sound" data-v="1">开</span>
@@ -1577,39 +1622,13 @@ function renderMine() {
       <div class="set-row"><span>🔍 字体大小</span>
         <span class="seg">${['normal', 'large', 'xlarge'].map(f => `<span class="seg-i ${settings.fs === f ? 'on' : ''}" data-set="fs" data-v="${f}">${f === 'normal' ? '标准' : f === 'large' ? '大' : '超大'}</span>`).join('')}</span>
       </div>
-      <p class="muted" style="margin-top:12px;line-height:1.6">首次训练点「开始」即激活声音；浏览器询问通知权限时点「允许」，锁屏时休息结束也能收到提醒。</p>
-    </div>
-    <div class="card">
-      <h3>账号与云同步</h3>
-      ${auth.token ? `
-        <p style="margin:4px 0 12px">👤 <b>${esc(auth.username)}</b> <span class="muted">· 已登录</span></p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <span class="chip" id="cloudUploadBtn">☁️ 上传到云端</span>
-          <span class="chip" id="cloudDownloadBtn">⬇️ 从云端恢复</span>
-          <span class="chip" id="btnOut">退出登录</span>
-        </div>
-        <p class="muted" style="margin-top:12px">训练记录、饮食数据、身体档案将同步到服务器，换设备登录同一账号即可恢复。</p>
-      ` : `
-          <input id="authUser" class="field-input" placeholder="用户名（3-20位字母数字）"
-            autocomplete="username" autocapitalize="none" spellcheck="false"/>
-          <p class="field-msg" id="authUserMsg" aria-live="polite"></p>
-          <input id="authPass" type="password" class="field-input" placeholder="密码（至少6位）"
-            autocomplete="current-password"/>
-          <p class="field-msg" id="authPassMsg" aria-live="polite"></p>
-          <div style="display:flex;gap:8px">
-            <span class="chip" id="authBtn" style="flex:1;justify-content:center">登录</span>
-            <span class="chip" id="authBtnReg" style="flex:1;justify-content:center">注册新账号</span>
-          </div>
-          <p class="muted" style="margin-top:12px">注册后数据可云同步：换手机、换浏览器登录同一账号即可恢复全部记录。</p>
-        `}
+      <p class="muted set-line">首次训练点「开始」即激活声音；浏览器询问通知权限时点「允许」，锁屏时休息结束也能收到提醒。</p>
+
+      <div class="set-sub">关于</div>
+      <p class="muted set-line">肌肉会飞 v3.0.0 · 科学训练与饮食记录</p>
     </div>
     <div class="card"><h3>我的成就</h3>
       <div class="badges">${badges.map(b => `<div class="badge ${b.on ? 'on' : ''}"><i>${b.icon}</i><span>${b.name}</span></div>`).join('')}</div>
-    </div>
-    <div class="card">
-      <h3>关于肌肉会飞</h3>
-      <p class="muted">肌肉会飞 v3.0.0 · 科学训练与饮食记录</p>
-      <p class="muted" style="margin-top:4px">数据默认保存在本机浏览器；登录账号后可云同步到服务器，随时换设备恢复。</p>
     </div>
     </div>
   `;
@@ -1673,6 +1692,7 @@ function resumeSessionIfAny() {
 
 // 登录门控：未登录时显示登录界面，登录后才进入应用
 let gateMode = 'login';
+let gateAuthType = 'user'; // user 用户名 | email 邮箱
 /* 字段实时校验 */
 function userFieldMsg(v) {
   if (!v) return '';
@@ -1680,6 +1700,26 @@ function userFieldMsg(v) {
   if (!/^[a-zA-Z0-9_]+$/.test(v)) return '只能包含字母、数字、下划线';
   if (v.length > 20) return '最多 20 个字符';
   return '';
+}
+function emailFieldMsg(v) {
+  if (!v) return '';
+  if (v.length > 120 || !/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v)) return '邮箱格式不正确';
+  return '';
+}
+function gateAccountMsg(v) {
+  return gateAuthType === 'email' ? emailFieldMsg(v) : userFieldMsg(v);
+}
+function setGateAuthType(type) {
+  gateAuthType = type;
+  const el = $('#gateUser');
+  $$('#gateAuthTypes .at-i').forEach(b => b.classList.toggle('on', b.dataset.at === type));
+  $('#gateUserLabel').textContent = type === 'email' ? '邮箱' : '用户名';
+  el.placeholder = type === 'email' ? '常用邮箱，如 name@example.com' : '3-20位字母/数字/下划线';
+  if (type === 'email') el.setAttribute('inputmode', 'email'); else el.removeAttribute('inputmode');
+  el.maxLength = type === 'email' ? 120 : 20;
+  el.value = '';
+  setFieldMsg('#gateUser', '#gateUserMsg', '');
+  hideGateError();
 }
 function passFieldMsg(v) {
   if (!v) return '';
@@ -1744,6 +1784,15 @@ function showLoginGate() {
       if (gateMode === 'login') { setGateMode('reg'); $('#gateUser').focus(); }
       else setGateMode('login');
     });
+    $$('#gateAuthTypes .at-i').forEach(b => b.addEventListener('click', () => {
+      setGateAuthType(b.dataset.at); $('#gateUser').focus();
+    }));
+    $('#gateGuest').addEventListener('click', () => {
+      hideLoginGate();
+      showTab('home');
+      resumeSessionIfAny();
+      toast('游客模式 · 数据保存在本机，登录后可云同步');
+    });
     $$('#gateGender .lg-g-i').forEach(btn => btn.addEventListener('click', () => {
       $$('#gateGender .lg-g-i').forEach(b => b.classList.toggle('active', b === btn));
       hideGateError();
@@ -1751,7 +1800,7 @@ function showLoginGate() {
     // 输入时实时校验并清除顶部错误
     $('#gateUser').addEventListener('input', e => {
       hideGateError();
-      setFieldMsg('#gateUser', '#gateUserMsg', userFieldMsg(e.target.value.trim()));
+      setFieldMsg('#gateUser', '#gateUserMsg', gateAccountMsg(e.target.value.trim()));
     });
     $('#gatePass').addEventListener('input', e => {
       hideGateError();
@@ -1759,7 +1808,7 @@ function showLoginGate() {
     });
     $('#gateUser').addEventListener('blur', e => {
       const v = e.target.value.trim();
-      if (v) setFieldMsg('#gateUser', '#gateUserMsg', userFieldMsg(v));
+      if (v) setFieldMsg('#gateUser', '#gateUserMsg', gateAccountMsg(v));
     });
     $('#gatePass').addEventListener('blur', e => {
       const v = e.target.value;
@@ -1780,8 +1829,8 @@ function hideLoginGate() {
 async function gateAuth(mode) {
   const uEl = $('#gateUser'), pEl = $('#gatePass');
   const u = (uEl.value || '').trim(), p = pEl.value || '';
-  if (!u || !p) { showGateError('请输入用户名和密码'); if (!u) uEl.focus(); else pEl.focus(); return; }
-  const uErr = userFieldMsg(u);
+  if (!u || !p) { showGateError('请输入账号和密码'); if (!u) uEl.focus(); else pEl.focus(); return; }
+  const uErr = gateAccountMsg(u);
   if (uErr) { showGateError(uErr); setFieldMsg('#gateUser', '#gateUserMsg', uErr); uEl.focus(); return; }
   const pErr = passFieldMsg(p);
   if (pErr) { showGateError(pErr); setFieldMsg('#gatePass', '#gatePassMsg', pErr); pEl.focus(); return; }
@@ -1789,9 +1838,9 @@ async function gateAuth(mode) {
   primary.disabled = secondary.disabled = true;
   primary.classList.add('loading');
   hideGateError();
-  // 32s：后端对数据库查询有 8s×3 次重试（首连 Cloudflare→Neon 链路需 10-20s 激活），
-  // 前端超时必须大于后端最坏路径 26s，否则用户拿不到重试成功的结果
-  const r = await api('POST', mode === 'reg' ? '/api/register' : '/api/login', { username: u, password: p }, 32000);
+  // 22s：后端查询 6s×3 重试（最坏 20s）；登录已去掉建表，热路径通常 2-4s
+  const payload = { username: u, password: p, loginType: gateAuthType === 'email' ? 'email' : 'user' };
+  const r = await api('POST', mode === 'reg' ? '/api/register' : '/api/login', payload, 22000);
   primary.classList.remove('loading');
   primary.disabled = secondary.disabled = false;
   if (r.ok) {
@@ -1818,35 +1867,30 @@ doLogout = function() { _origLogout(); showLoginGate(); $('#gateUser').value = '
 // 401 自动登出时也显示门控
 const _origApi = api;
 
-// 启动检查：有 token 则验证，无 token 直接显示登录
+// 启动：本地数据立即可见，网络只做后台校验——不再出现首页一直加载
 async function initApp() {
-  $('#app').innerHTML = bootSkeletonHTML();
+  // 立即用本地数据渲染首页，任何网络状况都不阻塞界面
+  showTab('home');
+  resumeSessionIfAny();
+  // 空闲预加载食物库，首次切到饮食记录不再等待
+  setTimeout(() => { if (window.DietModule) DietModule.prefetch(); }, 2500);
   if (auth.token) {
-    // 验证 token 是否有效
-    try {
-      const r = await api('GET', '/api/data');
-      if (r.ok) {
-        // token 有效，如果有云端数据且本地为空，自动恢复
-        if (r.data && Object.keys(r.data).length > 0 && records.length === 0 && dietEntries.length === 0) {
-          syncApply(r.data);
-        }
-        showTab('home');
-        resumeSessionIfAny();
-      } else {
-        showLoginGate();
+    // 后台静默校验 token（6s 短超时）：仅当服务器明确返回「未登录」才回登录门；
+    // 超时 / 断网一律保留本地登录态，应用完整离线可用
+    const r = await api('GET', '/api/data', null, 6000);
+    if (r && r.ok) {
+      // token 有效，云端有数据且本地为空时自动恢复
+      if (r.data && Object.keys(r.data).length > 0 && records.length === 0 && dietEntries.length === 0) {
+        syncApply(r.data);
       }
-    } catch (e) {
-      // 网络失败但本地有数据，允许离线使用
-      if (records.length > 0 || dietEntries.length > 0 || Object.keys(profile).length > 1) {
-        toast('离线模式 · 数据将在联网后同步');
-        showTab('home');
-        resumeSessionIfAny();
-      } else {
-        showLoginGate();
-      }
+    } else if (r && r.msg === '未登录') {
+      showLoginGate();
     }
   } else {
     showLoginGate();
   }
 }
-initApp();
+// DOMContentLoaded 后再启动：renderHome 依赖后续 <script> 的 PlanModule/RewardsModule 等，
+// 必须等全部模块脚本解析完；此时本地数据仍可在几十毫秒内渲染，不影响秒开体验
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initApp);
+else initApp();
