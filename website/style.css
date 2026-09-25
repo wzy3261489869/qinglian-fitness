@@ -1638,3 +1638,130 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 #app > * {
   animation: pageIn var(--t-base) var(--ease) both;
 }
+
+/* ================= 功能扩展：条码扫描 / 演示视频 / 身体维度 ================= */
+
+/* ---- 条码扫描入口（添加食物页头部右侧） ---- */
+.scan-entry {
+  min-height: 36px; display: inline-flex; align-items: center;
+  font-size: 14px; font-weight: 600; color: var(--primary);
+  padding: 0 12px; border-radius: var(--r-pill);
+  background: rgba(0, 181, 120, .12);
+}
+.scan-entry:active { opacity: .7; }
+
+/* ---- 扫码全屏覆盖层 ---- */
+.scan-overlay {
+  position: fixed; inset: 0; z-index: 100; background: rgba(0, 0, 0, .94);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .2s var(--ease);
+}
+.scan-overlay.show { opacity: 1; }
+.scan-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.scan-frame {
+  position: relative; width: min(74vw, 300px); aspect-ratio: 1.6;
+  border-radius: 16px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, .22), inset 0 0 0 2px rgba(255, 255, 255, .9);
+}
+.scan-frame::after {
+  content: ''; position: absolute; left: 10%; right: 10%; top: 50%; height: 2px;
+  background: var(--primary); box-shadow: 0 0 14px var(--primary);
+  animation: scanLaser 1.6s ease-in-out infinite alternate;
+}
+@keyframes scanLaser { from { top: 12%; } to { top: 88%; } }
+.scan-tip { position: relative; color: #fff; font-size: 14px; margin: 28px 0 0; }
+.scan-btns { position: relative; display: flex; gap: 12px; margin-top: 12px; }
+.scan-btns .btn {
+  min-width: 108px; border-color: rgba(255, 255, 255, .35);
+  color: #fff; background: rgba(255, 255, 255, .14);
+}
+
+/* ---- 动作演示视频入口 ---- */
+.ex-demo, .tps-demo {
+  width: 34px; height: 34px; flex-shrink: 0; border-radius: 999px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px; color: var(--primary); background: rgba(0, 181, 120, .12);
+}
+.ex-demo:active, .tps-demo:active { transform: scale(.9); }
+.ld-demo-wrap { padding: 12px 16px 0; }
+.ld-demo {
+  height: 46px; display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+
+/* ---- 身体维度页 ---- */
+.body-page .sp-body {
+  padding: 12px 16px 32px; display: flex; flex-direction: column; gap: 12px;
+}
+#bdDate.field-input { width: 100%; margin-bottom: 12px; }
+.bd-fields {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; margin-bottom: 16px;
+}
+.bd-field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--text-2); }
+.bd-field em { font-style: normal; font-size: 12px; color: var(--text-3); margin-left: 2px; }
+.bd-field input {
+  height: 44px; border-radius: 12px; border: 1px solid var(--border);
+  background: var(--bg-page); padding: 0 12px;
+  font-size: 16px; color: var(--text-1); font-variant-numeric: tabular-nums;
+}
+.bd-lcell {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--divider);
+}
+.bd-lcell:last-child { border-bottom: none; }
+.bd-li { font-size: 18px; }
+.bd-ll { flex: 1; font-size: 15px; color: var(--text-2); }
+.bd-lv { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.bd-lv em {
+  font-style: normal; font-size: 12px; font-weight: 500;
+  color: var(--text-3); margin-left: 2px;
+}
+.bd-d { font-size: 12px; font-weight: 600; padding: 3px 8px; border-radius: var(--r-pill); }
+.bd-d.good { color: var(--success); background: rgba(0, 181, 120, .12); }
+.bd-d.up { color: #ff6b35; background: rgba(255, 107, 53, .12); }
+.bd-d.flat { color: var(--text-3); background: var(--divider); }
+
+/* ---- 户外跑步页 ---- */
+.run-page .run-body { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+.run-stats {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+}
+.rs-i {
+  background: var(--bg-card); border-radius: 12px; padding: 10px 4px;
+  text-align: center; border: 1px solid var(--border);
+}
+.rs-v {
+  font-size: 17px; font-weight: 800; color: var(--text-1);
+  font-variant-numeric: tabular-nums; line-height: 1.2;
+  white-space: nowrap; overflow: hidden;
+}
+.rs-l { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+.run-gps-msg {
+  margin: 12px 0 0; padding: 8px 12px; font-size: 13px;
+  color: var(--warning); background: rgba(255, 125, 0, .1); border-radius: 10px;
+}
+.run-map-card { margin-top: 12px; }
+.run-map {
+  position: relative; isolation: isolate;
+  height: min(48vh, 380px); min-height: 220px;
+  border-radius: 16px; overflow: hidden;
+  background: var(--bg-page); border: 1px solid var(--border);
+}
+.rm-await {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  color: var(--text-3); font-size: 14px; text-align: center; padding: 16px;
+}
+.run-foot {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 6;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  background: linear-gradient(to top, var(--bg-page) 62%, rgba(245, 248, 246, 0));
+}
+.run-main-btn { box-shadow: 0 6px 20px rgba(0, 181, 120, .32); }
+/* Leaflet 控件在子页内的适配 */
+.run-map .leaflet-container { font: inherit; background: var(--bg-page); }
+.run-map .leaflet-bar { border: none; box-shadow: 0 2px 8px rgba(0, 0, 0, .18); border-radius: 10px; overflow: hidden; }
+.run-map .leaflet-bar a {
+  width: 34px; height: 34px; line-height: 34px; color: var(--text-1);
+  border-bottom: 1px solid var(--border);
+}
+
+

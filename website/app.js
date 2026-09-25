@@ -187,7 +187,7 @@ async function api(method, path, body, timeoutMs) {
   catch (e) { return { ok: false, msg: '服务器响应异常，请稍后重试', net: true }; }
 }
 function syncCollect() {
-  return { profile, records, dietEntries, waterMap, weightMap, dietCfg: store.get('dietCfg', null), theme, v: 2 };
+  return { profile, records, dietEntries, waterMap, weightMap, bodyMap: store.get('bodyMap', null), dietCfg: store.get('dietCfg', null), theme, v: 2 };
 }
 function syncApply(data) {
   if (!data || typeof data !== 'object') return;
@@ -196,6 +196,7 @@ function syncApply(data) {
   if (Array.isArray(data.dietEntries)) { dietEntries = data.dietEntries; saveDiet(); }
   if (data.waterMap) { waterMap = data.waterMap; saveWater(); }
   if (data.weightMap) { weightMap = data.weightMap; saveWeightMap(); }
+  if (data.bodyMap) { store.set('bodyMap', data.bodyMap); if (window.BodyModule) window.BodyModule.applyData(data.bodyMap); }
   if (data.dietCfg) store.set('dietCfg', data.dietCfg);
   if (data.theme) { theme = data.theme; applyTheme(); }
 }
@@ -673,6 +674,7 @@ function renderHome() {
     ${RewardsModule.encouragementHTML()}
     <div class="section-title"><h2>快捷入口</h2></div>
     <div class="quick q5">
+      <div class="q" data-run="start"><i>🏃</i>户外跑步</div>
       <div class="q" data-lib><i>📚</i>动作库</div>
       <div class="q" data-nav="plan"><i>💪</i>开始训练</div>
       <div class="q" data-nav="stats" data-rv="diet"><i>🥗</i>饮食记录</div>
@@ -838,6 +840,7 @@ function openWorkout(planId, saved) {
                 ${thumb ? `<span class="ex-thumb"><img loading="lazy" src="${thumb}" alt=""></span>` : ''}
                 <span class="ex-idx">${i + 1}</span>
                 <span class="ex-info"><span class="exn">${esc(n)}</span><span class="exm">${ex.minutes}分钟 · ${ex.kcal}千卡</span></span>
+                <span class="ex-demo" data-demo="${esc(n)}" role="button" aria-label="观看 ${n} 演示视频" title="看演示视频">▶</span>
                 <span class="ex-state"></span>
               </button>`;
             }).join('')}
@@ -1130,6 +1133,9 @@ function openLibDetail(id) {
       <span class="sp-side"></span>
     </div>
     <div class="ld-media"><img alt="${esc(x.n)}" src="${MEDIA_BASE}${esc(x.gif)}"></div>
+    <div class="ld-demo-wrap">
+      <a class="btn ghost full ld-demo" target="_blank" rel="noopener" href="${demoURL(x.n)}">▶ 观看动作演示视频</a>
+    </div>
     <div class="ld-body">
       <div class="ld-sec">
         <div class="ld-label">🎯 主要部位</div>
@@ -1188,6 +1194,18 @@ function thumbFor(name) {
   for (const k of Object.keys(EX_THUMB)) if (name.includes(k)) return MEDIA_BASE + 'images/' + EX_THUMB[k] + '.jpg';
   return null;
 }
+
+/* 动作演示视频：B站搜索（免自制、零成本，结果随动作名动态匹配） */
+function demoURL(name) {
+  return 'https://search.bilibili.com/all?keyword=' + encodeURIComponent(name + ' 动作示范');
+}
+// 统一在捕获阶段拦截 [data-demo]，避免点视频图标时误触发外层「完成动作」按钮
+document.addEventListener('click', (e) => {
+  const d = e.target.closest('[data-demo]');
+  if (!d) return;
+  e.preventDefault(); e.stopPropagation();
+  window.open(demoURL(d.dataset.demo), '_blank', 'noopener');
+}, true);
 
 /* ================= 饮食页 ================= */
 function renderDiet() {
@@ -1279,15 +1297,15 @@ function renderStats() {
         ${recent.length ? recent.map(r => `
           <div class="rec">
             <div class="rec-main">
-              <b class="rec-title">${esc(r.planTitle)}</b>
-              <span class="rec-meta">${r.date} · ${r.doneCount}/${r.total} 动作
+              <b class="rec-title">${r.type === 'run' ? '🏃 ' : ''}${esc(r.planTitle)}</b>
+              <span class="rec-meta">${r.date} · ${r.type === 'run' ? '户外 GPS' : r.doneCount + '/' + r.total + ' 动作'}
                 <span class="share-link" data-rw="share-date" data-date="${r.date}">海报</span>
                 <span class="del" data-del="${r.id}">删除</span>
               </span>
             </div>
             <div class="rec-data">
               <div class="rd-main"><b>${grp(r.kcal)}</b><i>千卡</i></div>
-              <div class="rd-sub">${r.minutes} 分钟</div>
+              <div class="rd-sub">${r.type === 'run' && r.distanceKm != null ? r.distanceKm.toFixed(2) + ' km · ' : ''}${r.minutes} 分钟</div>
             </div>
           </div>`).join('') : emptyHTML('record', '还没有训练记录', '完成第一次训练后，数据会出现在这里',
             '<button class="btn" id="statsEmptyCta">去开始第一次训练</button>')}
@@ -1353,6 +1371,7 @@ function renderMine() {
       <div class="bmi-row" id="rowH"><span class="bl">身高</span><span class="bv">${profile.height} cm</span></div>
       <div class="bmi-row" id="rowW"><span class="bl">体重</span><span class="bv">${fmtWeight(profile.weight)} kg · 点击更新曲线</span></div>
       <div class="bmi-row" id="rowTW"><span class="bl">目标体重</span><span class="bv">${fmtWeight(profile.targetWeight)} kg</span></div>
+      <div class="bmi-row" id="rowBody"><span class="bl">体脂 / 围度</span><span class="bv">📊 记录体脂与各部位围度曲线 ›</span></div>
     </div>
     <div class="card">
       <h3>体重 · 饮食趋势（近 14 天）</h3>
@@ -1431,6 +1450,7 @@ function renderMine() {
   $('#rowH').addEventListener('click', () => editField('身高（cm）', 'height', 'num'));
   $('#rowW').addEventListener('click', () => DietModule.openWeight());
   $('#rowTW').addEventListener('click', () => editField('目标体重（kg）', 'targetWeight', 'num'));
+  $('#rowBody').addEventListener('click', () => window.BodyModule.open());
   $$('#app [data-goal]').forEach(el => el.addEventListener('click', () => {
     profile.goal = el.dataset.goal; saveProfile(); renderMine(); toast('目标已切换为 ' + profile.goal);
   }));

@@ -169,6 +169,7 @@
     sub.innerHTML = `
       <div class="sp-head">
         <span class="back" data-dm="add-back">‹</span><b>添加食物 · ${meal}</b>
+        <span class="sp-side scan-entry" data-dm="scan" role="button" aria-label="扫码识别包装食品">📷 扫码</span>
       </div>
       <div class="sp-body">
         <div class="search">🔍<input id="faSearch" placeholder="搜索食物名称（如米饭、鸡胸、饺子）" value="${esc(keyword)}"></div>
@@ -401,6 +402,126 @@
     }));
   }
 
+  /* ---------------- 条码扫描（BarcodeDetector + Open Food Facts） ---------------- */
+  let bcCache = store.get('bcCache', {});
+  const saveBcCache = () => store.set('bcCache', bcCache);
+  let scanStream = null, scanIv = null, scanOverlayEl = null, scanDetector = null;
+
+  function lookupOFF(code) {
+    if (bcCache[code]) return Promise.resolve(bcCache[code]);
+    return fetch('https://world.openfoodfacts.org/api/v2/product/' + encodeURIComponent(code) +
+      '.json?fields=product_name,brands,nutriments&lc=zh',
+      { headers: { Accept: 'application/json' } })
+      .then(r => r.json())
+      .then(j => {
+        if (!j || j.status !== 1 || !j.product) return { missing: true, code };
+        const p = j.product, n2 = p.nutriments || {};
+        const get = (...ks) => {
+          for (const k of ks) if (n2[k] != null && !isNaN(n2[k])) return n2[k];
+          return null;
+        };
+        const k = get('energy-kcal_100g', 'energy_100g');
+        if (k == null) return { missing: true, code, name: p.product_name };
+        const item = {
+          id: 'bc-' + code,
+          n: p.product_name || ((p.brands || '') + ' 条码商品').trim(),
+          c: '包装食品', k: Math.round(k * (p.product_name ? 1 : 1)),
+          p: +(get('proteins_100g') || 0).toFixed(1),
+          ca: +(get('carbohydrates_100g') || 0).toFixed(1),
+          f: +(get('fat_100g') || 0).toFixed(1),
+          q: [30, 60, 100], barcode: code
+        };
+        bcCache[code] = item; saveBcCache();
+        return item;
+      });
+  }
+
+  function applyBarcodeItem(item) {
+    if (!foods) foods = [];
+    if (!foods.some(f => f.id === item.id)) foods.push(item);
+    keyword = item.n;
+    const sub = document.querySelector('.dm-add-page.show');
+    const search = sub && $('#faSearch', sub);
+    if (search) { search.value = item.n; search.dispatchEvent(new Event('input')); }
+    toast(`已识别：${item.n} · ${item.k} 千卡/100g`);
+  }
+
+  function closeScan() {
+    if (scanIv) { clearInterval(scanIv); scanIv = null; }
+    if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+    if (scanOverlayEl) {
+      scanOverlayEl.classList.remove('show');
+      const el = scanOverlayEl; scanOverlayEl = null;
+      setTimeout(() => el.remove(), 200);
+    }
+  }
+
+  function openScan() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      manualBarcode(); return;
+    }
+    // BarcodeDetector：安卓 Chrome 支持；不支持时直接走手动输入
+    if (typeof BarcodeDetector === 'undefined') {
+      toast('当前浏览器不支持扫码，可手动输入条码'); manualBarcode(); return;
+    }
+    let formats = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'qr_code'];
+    try {
+      const supported = BarcodeDetector.getSupportedFormats();
+      if (supported && supported.length) formats = supported;
+    } catch (e) {}
+    scanOverlayEl = document.createElement('div');
+    scanOverlayEl.className = 'scan-overlay';
+    scanOverlayEl.innerHTML = `
+      <video class="scan-video" autoplay playsinline muted></video>
+      <div class="scan-frame"></div>
+      <p class="scan-tip">将商品条码对准取景框</p>
+      <div class="scan-btns">
+        <button type="button" class="btn ghost" data-dm="scan-manual">手动输入</button>
+        <button type="button" class="btn" data-dm="scan-close">关闭</button>
+      </div>`;
+    document.body.appendChild(scanOverlayEl);
+    requestAnimationFrame(() => scanOverlayEl.classList.add('show'));
+
+    const video = $('.scan-video', scanOverlayEl);
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false })
+      .then(stream => {
+        scanStream = stream;
+        video.srcObject = stream;
+        scanDetector = new BarcodeDetector({ formats });
+        scanIv = setInterval(async () => {
+          try {
+            const codes = await scanDetector.detect(video);
+            if (codes && codes[0]) {
+              const code = codes[0].rawValue;
+              closeScan(); await onBarcode(code);
+            }
+          } catch (e) {}
+        }, 350);
+      })
+      .catch(e => {
+        closeScan();
+        toast(e.name === 'NotAllowedError' ? '相机权限被拒绝，可手动输入条码' : '无法打开相机');
+        manualBarcode();
+      });
+  }
+
+  async function onBarcode(code) {
+    toast('正在查询营养数据…');
+    try {
+      const item = await lookupOFF(String(code).replace(/\D/g, '') || code);
+      if (!item || item.missing) {
+        toast('开放食品库中没有该商品，可在食物库搜索同类');
+        return;
+      }
+      applyBarcodeItem(item);
+    } catch (e) { toast('查询失败，请检查网络'); }
+  }
+
+  function manualBarcode() {
+    const code = prompt('输入包装上的数字条码（如 6901234567890）');
+    if (code && code.trim()) onBarcode(code.trim());
+  }
+
   /* ---------------- 事件委托 ---------------- */
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-dm]');
@@ -411,6 +532,9 @@
       case 'date-next': renderDiet(addDays(viewDate, 1)); break;
       case 'date-today': renderDiet(todayStr()); break;
       case 'add': openAdd(btn.dataset.meal); break;
+      case 'scan': openScan(); break;
+      case 'scan-close': closeScan(); break;
+      case 'scan-manual': closeScan(); manualBarcode(); break;
       case 'del':
         dietEntries = dietEntries.filter(x => x.id !== btn.dataset.id);
         saveDiet(); renderDiet(); toast('已删除');
