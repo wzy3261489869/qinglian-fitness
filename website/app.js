@@ -1454,8 +1454,8 @@ function openGenderSheet(value, onConfirm) {
   const root = mountSheet(`
     <div class="sheet-head"><b>选择性别</b></div>
     <div class="gcard-row">
-      ${card('男', '#165dff', '<circle cx="10" cy="10" r="3.4"/><path d="M12.6 7.4 19 1"/><path d="M15.2 1H19v3.8"/>')}
-      ${card('女', '#ec4899', '<circle cx="12" cy="8" r="3.4"/><path d="M12 11.4v9.6"/><path d="M8.2 16.2h7.6"/>')}
+      ${card('男', '#165dff', '<circle cx="9.5" cy="14" r="4.5"/><path d="M12.7 10.8 19 5"/><path d="M14 5h5v5"/>')}
+      ${card('女', '#ec4899', '<circle cx="12" cy="8.5" r="4.5"/><path d="M12 13v6.5"/><path d="M8.5 16.5h7"/>')}
     </div>
     <div class="sheet-btns"><button type="button" class="btn full" id="sheetCancel2">关闭</button></div>`);
   root.querySelectorAll('.gcard').forEach(b => b.addEventListener('click', () => {
@@ -1480,8 +1480,8 @@ function editField(label, key) {
 function genderMeta() {
   const male = profile.gender !== '女';
   return male
-    ? { color: '#165dff', bg: 'rgba(22,93,255,.10)', paths: '<circle cx="10" cy="10" r="3.6"/><path d="M12.7 7.3 19 1"/><path d="M15 1h4v4"/>' }
-    : { color: '#ec4899', bg: 'rgba(236,72,153,.10)', paths: '<circle cx="12" cy="8" r="3.6"/><path d="M12 11.6v9.8"/><path d="M8 16.5h8"/>' };
+    ? { color: '#165dff', bg: 'rgba(22,93,255,.10)', paths: '<circle cx="9.5" cy="14" r="4.5"/><path d="M12.7 10.8 19 5"/><path d="M14 5h5v5"/>' }
+    : { color: '#ec4899', bg: 'rgba(236,72,153,.10)', paths: '<circle cx="12" cy="8.5" r="4.5"/><path d="M12 13v6.5"/><path d="M8.5 16.5h7"/>' };
 }
 const GO_ARROW_SVG = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--primary)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9.2 4.6 16.6 12l-7.4 7.4"/></svg>';
 function renderMine() {
