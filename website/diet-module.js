@@ -8,8 +8,40 @@
 'use strict';
 (function () {
   const MEALS = ['早餐', '午餐', '晚餐', '加餐'];
-  const MEAL_ICONS = { '早餐': '🌅', '午餐': '☀️', '晚餐': '🌙', '加餐': '🍎' };
   const CATS = ['全部', '主食', '肉蛋奶', '豆制品', '蔬菜', '菌藻', '水果', '坚果零食', '饮品', '菜肴快餐'];
+  /* 饮食页每日 TIPS：按日期轮换，一天一条不重复 */
+  const DIET_TIPS = [
+    '每餐一拳主食、一掌蛋白、两拳蔬菜，是最省心的搭配',
+    '减脂期缺口 300-500 千卡更可持续，别一刀砍半',
+    '先吃蔬菜再吃主食，血糖更平稳也更抗饿',
+    '蛋白质分散到三餐吃，利用率比一顿吃完更高',
+    '渴了再喝就晚了，全天匀速补水 1.5-2 升',
+    '配料表按顺序看：前三位是糖油的零食要少买',
+    '无糖不等于没热量，果汁和乳饮料都要看营养表',
+    '每天一个鸡蛋加一杯奶，是最简单的蛋白兜底',
+    '外卖多点清蒸炖煮，少点红烧糖醋和油炸',
+    '坚果好吃但热量高，每天一小把（约 15 克）就够',
+    '全谷物替代一半白米饭，饱腹感更持久',
+    '汤里大部分是水和盐，营养远不如吃料实在',
+    '酒精热量不低还影响恢复，训练日尽量别喝',
+    '水果含糖不低，每天 200-350 克差不多够了',
+    '加工肉偶尔吃可以，日常优先新鲜肉蛋豆',
+    '饿到头晕才吃容易暴食，两餐间加点蛋白零食',
+    '看懂「每 100 克」和「每份」的区别，别被包装骗了',
+    '深色蔬菜占一半，维生素和纤维都更高',
+    '睡前 2 小时尽量不进食，睡得好第二天不馋',
+    '豆制品是植物蛋白好来源，价格也友好',
+    '奶茶改中杯、少糖，一个月能省下几千千卡',
+    '烹饪多用水煮蒸拌，少用煎炸，热量差一倍',
+    '体重是趋势不是单点，每周同一时间称一次就好',
+    '燕麦选原片，风味麦片的糖往往超乎想象',
+    '吃饭别刷手机，专注进食更容易感到饱',
+    '薯片饼干放在看不见的地方，馋的概率少一半',
+    '运动后别只补水，来点碳水加蛋白恢复更好',
+    '乳糖不耐可以选无糖酸奶或舒化奶',
+    '代糖饮料可以过渡，但最终目标是少喝甜饮',
+    '记录的意义不是自责，是看见改进的空间'
+  ];
   const ACTIVITIES = [
     { v: 1.2, label: '久坐', sub: '办公室 · 很少运动' },
     { v: 1.375, label: '轻度', sub: '每周 1-3 次' },
@@ -40,8 +72,12 @@
   const gramsOf = id => gramsMap[id] != null ? gramsMap[id] : 100;
 
   /* ---------------- 页面：饮食记录 ---------------- */
-  async function renderDiet(date) {
+  // opts.anim=false 时不播数字动画（切日期/回到今天等就地刷新，避免闪动）
+  async function renderDiet(date, opts) {
+    appNoAnim();
     viewDate = date || viewDate;
+    const anim = !(opts && opts.anim === false);
+    const dca = v => anim ? ` data-count="${v}"` : '';
     const isToday = viewDate === todayStr();
     const list = dayEntries(viewDate);
     const nutri = sumNutrition(list);
@@ -69,13 +105,13 @@
         <div>
           <div class="label">今日已摄入</div>
           <div class="big">${nutri.kcal
-            ? `<span data-count="${Math.round(nutri.kcal)}" data-group="1">${grp(Math.round(nutri.kcal))}</span>`
+            ? `<span${dca(Math.round(nutri.kcal))} data-group="1">${grp(Math.round(nutri.kcal))}</span>`
             : '<span class="no-data">--</span>'}<small> 千卡</small></div>
           <div class="label" style="margin-top:4px">目标 ${plan.target} 千卡${workoutKcal ? ' · 运动+' + workoutKcal : ''}</div>
         </div>
         <div class="ring-wrap">
           ${ring(Math.min(pct, 100), '#ffffff', 'rgba(255,255,255,.28)')}
-          <div class="rtext"><b><span data-count="${pct}">${pct}</span>%</b><i>${over ? '已超量 ⚠️' : '热量进度'}</i></div>
+          <div class="rtext"><b><span${dca(pct)}>${pct}</span>%</b><i>${over ? '已超量 ⚠️' : '热量进度'}</i></div>
         </div>
       </div>
       <div class="card dm-budget-row">
@@ -100,7 +136,7 @@
           const pk = mn.protein * 4, ck = mn.carb * 4, fk = mn.fat * 9;
           const tk = pk + ck + fk || 1;
           return `<div class="meal">
-            <div class="mh"><span>${MEAL_ICONS[m]}</span><b>${m}</b>
+            <div class="mh"><b>${m}</b>
               ${mk ? `<span class="mk">${mk} 千卡</span>` : ''}
               <span class="plus" data-dm="add" data-meal="${m}">＋</span>
             </div>
@@ -124,11 +160,19 @@
       <div class="card">
         <h3>每日饮水（目标 8 杯）</h3>
         <div class="water-cups">${Array.from({ length: 8 }, (_, i) => `<span class="${i < cups ? 'on' : ''}" data-dm="cup" data-i="${i}">💧</span>`).join('')}</div>
-        <p class="muted" style="text-align:center">已喝 <span data-count="${cups}">${cups}</span>/8 杯 · 少量多次更健康</p>
+        <p class="muted" style="text-align:center">已喝 <span class="wc-cnt">${cups}</span>/8 杯 · 少量多次更健康</p>
       </div>
-      <div class="tips"><span>🥗</span><p>每餐一拳主食、一掌优质蛋白、两拳蔬菜；减脂期缺口 300-500 千卡更可持续。</p></div>
+      <div class="tips"><span class="tips-badge">TIPS</span><p>${esc(dailyPick(DIET_TIPS))}</p></div>
     `;
-    runCountUps($('#app'));
+    if (anim) runCountUps($('#app'));
+  }
+
+  /* 水杯点击：只更新杯子和计数文字，不重绘整页（避免闪烁） */
+  function updateWaterUI(n) {
+    document.querySelectorAll('.water-cups [data-dm="cup"]').forEach((c, i) =>
+      c.classList.toggle('on', i < n));
+    const cnt = document.querySelector('.wc-cnt');
+    if (cnt) cnt.textContent = n;
   }
 
   /* ---------------- 子页：添加食物 ---------------- */
@@ -355,8 +399,8 @@
 
     box.innerHTML = `
       <div class="trend-legend">
-        <span><i style="background:#165dff"></i>体重（左轴 kg）</span>
-        <span><i style="background:var(--primary)"></i>摄入（右轴 千卡）</span>
+        <span><i style="background:#165dff"></i>体重 kg</span>
+        <span><i style="background:var(--primary)"></i>摄入 kcal</span>
         <span><i style="background:var(--warning)"></i>目标 ${plan.target}</span>
       </div>
       <div class="chart-host trend-host" id="trendHost">
@@ -376,7 +420,7 @@
         ${zones}
       </svg>
       </div>
-      <button class="btn ghost full" data-dm="open-weight" style="height:40px;margin-top:8px">⚖️ 记录今日体重</button>`;
+      <button class="btn ghost full" data-dm="open-weight" style="height:40px;margin-top:8px">记录今日体重</button>`;
     ChartTip.bind(document.getElementById('trendHost'), i => ({
       date: days[i],
       rows: [
@@ -511,9 +555,9 @@
     if (!btn) return;
     const act = btn.dataset.dm;
     switch (act) {
-      case 'date-prev': renderDiet(addDays(viewDate, -1)); break;
-      case 'date-next': renderDiet(addDays(viewDate, 1)); break;
-      case 'date-today': renderDiet(todayStr()); break;
+      case 'date-prev': renderDiet(addDays(viewDate, -1), { anim: false }); break;
+      case 'date-next': renderDiet(addDays(viewDate, 1), { anim: false }); break;
+      case 'date-today': renderDiet(todayStr(), { anim: false }); break;
       case 'add': openAdd(btn.dataset.meal); break;
       case 'scan': openScan(); break;
       case 'scan-close': closeScan(); break;
@@ -525,8 +569,10 @@
       case 'cup': {
         const i = +btn.dataset.i;
         const cur = waterMap[viewDate] || 0;
-        waterMap[viewDate] = cur === i + 1 ? i : i + 1;
-        saveWater(); renderDiet();
+        const next = cur === i + 1 ? i : i + 1;
+        waterMap[viewDate] = next;
+        saveWater();
+        updateWaterUI(next);
         break;
       }
       case 'open-target': openTarget(); break;

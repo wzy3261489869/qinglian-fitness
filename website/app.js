@@ -125,6 +125,39 @@ const GOAL_TIPS = {
   '塑形': '温和热量缺口 + 力量训练，线条更紧致',
   '入门': '先养成每周 3 次运动习惯，循序渐进'
 };
+/* 首页每日 TIPS：按日期轮换，一天一条不重复 */
+const HOME_TIPS = [
+  '训练前动态热身 5 分钟，动作更标准也不易受伤',
+  '组间休息别玩手机，30-60 秒刚好保持肌肉温度',
+  '力量训练优先安排在精力最好的时段',
+  '每周留 1-2 天休息日，肌肉是在休息里长出来的',
+  '动作幅度比重量重要，做全程比做半程更有效',
+  '记录训练才有进步可看，今天就从一条记录开始',
+  '深蹲时膝盖和脚尖同向，重心放在全脚掌',
+  '训练后 1-2 小时内补充蛋白质，恢复更快',
+  '别只练喜欢的部位，全身均衡才不容易受伤',
+  '呼吸别憋气：发力时呼气，还原时吸气',
+  '平台期不是退步，换个动作或重量给身体新刺激',
+  '每天 7-8 小时睡眠，是最便宜的增肌补剂',
+  '核心收紧不是吸肚子，是像被人轻推肚子前绷住',
+  '久坐族每小时起来活动 2 分钟，髋部更放松',
+  '拉伸到微微紧绷即可，疼了说明拉过头了',
+  '有氧和力量可以同天练，先力量后有氧效果更好',
+  '补水比补剂重要：训练日多喝 500 毫升起步',
+  '新手重量的标准：最后两次还能保持动作不变形',
+  '同一肌群间隔 48 小时再练，长得比天天练更好',
+  '热身可以用轻重量组代替，直接进入正式组状态',
+  '饭后 1 小时再训练，胃里舒服表现也更好',
+  '把训练写进日程表，像开会一样准时赴约',
+  '引体向上拉不上去？先从悬垂和弹力带辅助开始',
+  '训练时少看体重秤，多看重量和次数的变化',
+  '平板支撑塌腰了就停，质量大于秒数',
+  '压力大时快走 20 分钟，比硬撑着练更划算',
+  '训练后轻微酸胀正常，关节刺痛要立刻停',
+  '周末别报复性躺平，散步拉伸都比不动强',
+  '渐进超负荷：每周只多加一点点，一年后大不同',
+  '练前咖啡因能提表现，但下午 4 点后少喝别影响睡眠'
+];
 
 /* ================= 存储 ================= */
 const store = {
@@ -286,6 +319,17 @@ function addDays(dateStr, n) {
   const d = new Date(dateStr + 'T00:00:00');
   d.setDate(d.getDate() + n);
   return fmtDate(d);
+}
+/* 按日期取一条不重复轮换内容（tips/语录共用） */
+function dailyPick(pool) {
+  const t = Math.floor(new Date(todayStr() + 'T00:00:00').getTime() / 864e5);
+  return pool[t % pool.length];
+}
+/* 就地重渲染时屏蔽子元素入场动画（避免切日期/点水杯等操作整页闪烁）
+   showTab 切页前会移除该标记，恢复入场动画 */
+function appNoAnim() {
+  const el = $('#app');
+  if (el) el.classList.add('no-anim');
 }
 function calcPlan(p) {
   const base = 10 * p.weight + 6.25 * p.height - 5 * p.age;
@@ -590,8 +634,8 @@ function runCountUps(scopeEl) {
 /* 记录页分段切换条 */
 function recordsSegHTML() {
   return `<div class="rec-seg" role="tablist" aria-label="记录类型">
-    <span class="rs-i ${recordsView === 'train' ? 'on' : ''}" data-rvseg="train" role="tab" aria-selected="${recordsView === 'train'}">🏋️ 训练记录</span>
-    <span class="rs-i ${recordsView === 'diet' ? 'on' : ''}" data-rvseg="diet" role="tab" aria-selected="${recordsView === 'diet'}">🥗 饮食记录</span>
+    <span class="rs-i ${recordsView === 'train' ? 'on' : ''}" data-rvseg="train" role="tab" aria-selected="${recordsView === 'train'}">训练记录</span>
+    <span class="rs-i ${recordsView === 'diet' ? 'on' : ''}" data-rvseg="diet" role="tab" aria-selected="${recordsView === 'diet'}">饮食记录</span>
   </div>`;
 }
 // 切换训练/饮食记录：旧内容按方向滑出淡出 → 交换内容 → 新内容滑入淡入；分段条选中态先即时响应
@@ -613,6 +657,7 @@ function switchRecordsView(v, dir) {
   app.classList.add(dir > 0 ? 'rv-out-r' : 'rv-out-l');
   // 旧内容退出完成后交换内容并让新内容滑入
   app._rvTimer = setTimeout(() => {
+    appNoAnim(); // 内容交换交给 #app 的滑入动画，子元素不再重复播放入场
     if (v === 'diet') renderDiet();
     else renderStats();
     const a2 = $('#app');
@@ -660,6 +705,7 @@ function showTab(tab) {
   document.body.dataset.tab = tab;
   document.body.dataset.rv = tab === 'stats' ? recordsView : '';
   $$('#tabbar a').forEach(a => a.classList.toggle('active', a.dataset.tab === tab));
+  $('#app').classList.remove('no-anim'); // 切页恢复入场动画
   if (tab === 'stats') {
     if (recordsView === 'diet') renderDiet();
     else renderStats();
@@ -677,6 +723,7 @@ function closeSubpages() { $$('.subpage').forEach(p => p.classList.remove('show'
 
 /* ================= 首页 ================= */
 function renderHome() {
+  appNoAnim();
   const t = todayStr();
   const weekKcal = records.filter(r => r.date >= addDays(t, -6)).reduce((s, r) => s + r.kcal, 0);
   const weekCount = records.filter(r => r.date >= addDays(t, -6)).length;
@@ -691,7 +738,12 @@ function renderHome() {
         <h1>${greeting()}，${esc(profile.nickname)}</h1>
         <p>今天是 ${todayStr()} · 周${WEEK[new Date().getDay()]} · 距离周末还有${5 - (new Date().getDay() % 7) > 0 ? 5 - (new Date().getDay() % 7) : 0}天</p>
       </div>
-      <button class="head-icon-btn" id="quickTheme" aria-label="切换深色/浅色" title="切换深色/浅色">🌓</button>
+      <button class="head-icon-btn" id="quickTheme" aria-label="切换深色/浅色" title="切换深色/浅色">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="8.4"/>
+          <path d="M12 3.6v16.8M12 3.6a8.4 8.4 0 0 1 0 16.8" fill="currentColor" stroke="none"/>
+        </svg>
+      </button>
     </div>
     <div class="home-col home-col-l">
     <div class="hero">
@@ -720,7 +772,7 @@ function renderHome() {
     </div>
     ${RewardsModule.encouragementHTML()}
     </div>
-    <div class="tips"><span>💡</span><p>${esc(GOAL_TIPS[profile.goal])}。健身贵在坚持，微小的习惯长期复利。</p></div>
+    <div class="tips"><span class="tips-badge">TIPS</span><p>${esc(dailyPick(HOME_TIPS))}</p></div>
   `;
   bindPlanCards();
   $('#quickTheme').addEventListener('click', () => {
@@ -1252,6 +1304,7 @@ function renderDiet() {
 
 /* ================= 数据页 ================= */
 function renderStats() {
+  appNoAnim();
   const today = todayStr();
   const week = Array.from({ length: 7 }, (_, i) => addDays(today, i - 6));
   const weekData = week.map(d => ({ d, kcal: records.filter(r => r.date === d).reduce((s, r) => s + r.kcal, 0) }));
@@ -1533,6 +1586,7 @@ const PREF_ICONS = {
   font: pIcon('<path d="M4.5 19.5 10 6l5.5 13.5M6.8 14h6.4"/>')
 };
 function renderMine() {
+  appNoAnim();
   const bmi = bmiInfo();
   const totalK = records.reduce((s, r) => s + r.kcal, 0);
   const badges = [

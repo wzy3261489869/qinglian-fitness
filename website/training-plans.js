@@ -258,6 +258,13 @@
   }
 
   /* ---------------- 组件：今日训练卡片 ---------------- */
+  // 徽标：简约线性 SVG 图标（颜色由 CSS 控制，深浅色自适应）
+  const ttIcon = paths => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+  const TT_ICONS = {
+    plan: ttIcon('<rect x="6" y="4.5" width="12" height="16" rx="2.5"/><path d="M9.5 2.8h5v3.4h-5z"/><path d="M9.3 11h5.4M9.3 15h3.4"/>'),
+    rest: ttIcon('<path d="M17.2 13.6A6.5 6.5 0 0 1 9.9 5.4a6.5 6.5 0 1 0 7.3 8.2Z"/>'),
+    done: ttIcon('<circle cx="12" cy="12" r="8.4"/><path d="m8.4 12.3 2.5 2.5 4.7-5.2"/>')
+  };
   function todayCard() {
     const id = getActiveId();
     const plan = findPlan(id);
@@ -265,7 +272,7 @@
     if (!plan) {
       return `<div class="tp-today tp-today-empty" data-tp="tp-open" data-id="${PLANS[0].id}">
         <div class="tt-left">
-          <div class="tt-badge">📋</div>
+          <div class="tt-badge">${TT_ICONS.plan}</div>
           <div><b>选择你的训练计划</b><small>按目标与难度挑选，开启本周课表</small></div>
         </div>
         <span class="tt-cta">去选择 ›</span>
@@ -276,7 +283,7 @@
     if (!day) {
       return `<div class="tp-today tp-today-rest">
         <div class="tt-left">
-          <div class="tt-badge">${trainedToday ? '🎯' : '🛌'}</div>
+          <div class="tt-badge">${trainedToday ? TT_ICONS.done : TT_ICONS.rest}</div>
           <div><b>${trainedToday ? '今日已打卡' : '今天是休息日'}</b><small>${esc(plan.title)} · 散步拉伸帮助恢复</small></div>
         </div>
         <span class="tt-cta" data-tp="tp-open" data-id="${plan.id}">看课表</span>
@@ -338,6 +345,7 @@
       : emptyHTML('search', '该组合下暂无计划', '换个筛选试试');
   }
   function renderList() {
+    appNoAnim();
     $('#app').innerHTML = `
       <div class="page-head"><h1>训练计划</h1><p>按目标与难度挑选 · 一周课表 · 组次与休息建议</p></div>
       <div class="tp-filters">${filtersInnerHTML()}</div>
@@ -495,7 +503,7 @@
         <p class="muted" id="tpcStat"></p>
         <div class="tpc-confetti" id="tpcConfetti"></div>
         <div class="tpc-btns">
-          <button class="btn mega" data-tp="tp-save">💾 保存并打卡</button>
+          <button class="btn mega" data-tp="tp-save">保存并打卡</button>
           <button class="btn ghost" data-tp="tp-continue">再练一会儿</button>
         </div>
       </div>`;

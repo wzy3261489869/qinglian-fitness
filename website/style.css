@@ -140,7 +140,12 @@ img { display: block; }
   background: var(--grad); color: #fff; font-size: 13px; font-weight: 600;
   display: flex; align-items: center; flex-shrink: 0;
 }
-.tips { display: flex; gap: 12px; padding: 16px 16px; background: #fff1e8; border-radius: var(--r-card); margin-top: 12px; }
+.tips { display: flex; gap: 12px; padding: 16px 16px; background: #fff1e8; border-radius: var(--r-card); margin-top: 12px; align-items: center; }
+.tips-badge {
+  flex-shrink: 0; height: 22px; padding: 0 9px; border-radius: 999px;
+  background: #ff7d00; color: #fff; font-size: 11px; font-weight: 800;
+  letter-spacing: .1em; display: inline-flex; align-items: center; font-style: normal;
+}
 .tips p { font-size: 13px; color: #b25c00; line-height: 1.6; }
 
 /* 列表 */
@@ -354,6 +359,8 @@ img { display: block; }
 :root[data-theme="dark"] .subpage .sp-head { background: rgba(28, 28, 30, .96); border-bottom: 1px solid var(--card-line); }
 :root[data-theme="dark"] .tips { background: rgba(255, 125, 0, .12); }
 :root[data-theme="dark"] .tips p { color: #ffb368; }
+:root[data-theme="dark"] .tips-badge { background: rgba(255, 125, 0, .9); }
+:root[data-theme="dark"] .tp-today-rest .tt-badge { background: rgba(255, 125, 0, .14); color: #ffb368; }
 :root[data-theme="dark"] .stepper button { background: #2c2c2e; color: var(--primary); }
 :root[data-theme="dark"] .btn.ghost { background: #2c2c2e; color: var(--primary); }
 :root[data-theme="dark"] .meal .plus { background: var(--bg-elevated); }
@@ -859,10 +866,11 @@ body {
 .tp-today-rest small, .tp-today-empty small { font-size: 13px; color: var(--text-3); }
 .tt-badge {
   width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center; font-size: 22px;
-  background: rgba(0,181,120,.12);
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(0,181,120,.12); color: var(--primary-dark);
 }
-.tp-today-rest .tt-badge { background: #fff1e8; }
+.tt-badge svg { width: 22px; height: 22px; }
+.tp-today-rest .tt-badge { background: #fff1e8; color: #b25c00; }
 .tp-today .tt-cta { font-size: 13px; font-weight: 700; color: var(--primary); flex-shrink: 0; }
 
 /* ---- 筛选区 ---- */
@@ -898,7 +906,7 @@ body {
 .tp-set-btn.on { background: var(--grad); color: #fff; }
 .tp-d-head { display: flex; gap: 16px; align-items: center; margin: 8px 0 4px; }
 .tp-d-head .tc-ring { position: relative; width: 80px; height: 80px; flex-shrink: 0; }
-.tp-d-head .tc-ring svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+.tp-d-head .tc-ring svg { position: absolute; inset: 0; width: 80px; height: 80px; transform: rotate(-90deg); }
 .tp-d-head .tc-ring-tx { font-size: 15px; }
 .tp-d-info { flex: 1; min-width: 0; }
 .tp-week { margin-top: 16px; display: flex; flex-direction: column; gap: 12px; }
@@ -1165,7 +1173,8 @@ body {
 
 /* 双曲线图 */
 .trend-legend {
-  display: flex; flex-wrap: wrap; gap: 12px 16px; font-size: 13px; color: var(--text-2);
+  display: flex; flex-wrap: nowrap; justify-content: space-between; align-items: center;
+  gap: 8px; font-size: 12px; color: var(--text-2); white-space: nowrap;
   margin-bottom: 8px;
 }
 .trend-legend i {
@@ -1197,7 +1206,7 @@ body {
 }
 .hm-summary b { display: block; font-size: 20px; color: var(--text-1); font-weight: 800; }
 .hm-scroll { overflow-x: auto; overflow-y: hidden; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
-.hm-inner { position: relative; width: max-content; padding-bottom: 4px; }
+.hm-inner { position: relative; width: max-content; padding: 0 4px 4px 0; }
 .hm-months { position: relative; height: 20px; margin-left: 24px; }
 .hm-month { position: absolute; top: 0; font-size: 13px; color: var(--text-3); }
 .hm-grid-wrap { display: flex; gap: 4px; position: relative; }
@@ -1380,6 +1389,7 @@ body {
   display: inline-flex; align-items: center; justify-content: center;
   transition: transform .12s, background-color .2s;
 }
+.head-icon-btn svg { width: 20px; height: 20px; }
 .head-icon-btn:active { transform: scale(.9); }
 
 /* ---------- 记录页分段胶囊 ---------- */
@@ -1697,6 +1707,10 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 }
 #app > * {
   animation: pageIn var(--t-base) var(--ease) both;
+}
+/* 就地刷新（切日期/点水杯/筛选/记录切换等）：屏蔽子元素入场动画，避免整页闪动 */
+#app.no-anim > * {
+  animation: none !important;
 }
 
 /* ================= 功能扩展：条码扫描 / 演示视频 / 身体维度 ================= */

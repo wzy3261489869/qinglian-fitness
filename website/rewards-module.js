@@ -174,14 +174,16 @@
     ctx.textBaseline = 'top';
     ctx.fillText(date.replace(/-/g, ' / '), cx0 + 44, cy0 + 44);
 
-    // 大数字：分钟
+    // 大数字：分钟（先在大字号下量宽，再换小字号画标签，避免标签叠在数字上）
     ctx.fillStyle = '#00b578';
     ctx.font = '800 130px ' + FONT;
     ctx.textBaseline = 'alphabetic';
-    ctx.fillText(String(s.minutes), cx0 + 40, cy0 + 280);
+    const minStr = String(s.minutes);
+    ctx.fillText(minStr, cx0 + 40, cy0 + 280);
+    const minW = ctx.measureText(minStr).width;
     ctx.font = '600 30px ' + FONT;
     ctx.fillStyle = '#008f62';
-    ctx.fillText('分钟 · 今日训练时长', cx0 + 44 + ctx.measureText(String(s.minutes)).width + 14, cy0 + 258);
+    ctx.fillText('分钟 · 今日训练时长', cx0 + 40 + minW + 16, cy0 + 280);
 
     // 三宫格数据
     const boxes = [
@@ -197,11 +199,14 @@
       ctx.fillStyle = '#8a96a3'; ctx.font = '400 20px ' + FONT;
       ctx.textBaseline = 'top';
       ctx.fillText(lab, bx + 20, cy0 + 384);
-      ctx.fillStyle = '#1f2d3d'; ctx.font = '800 46px ' + FONT;
+      // 数值先量宽再画单位（同字号下测量，避免单位叠在数值上）
+      const vStr = String(v);
+      ctx.fillStyle = '#1f2d3d'; ctx.font = '800 40px ' + FONT;
       ctx.textBaseline = 'alphabetic';
-      ctx.fillText(String(v), bx + 18, cy0 + 490);
+      ctx.fillText(vStr, bx + 18, cy0 + 494);
+      const vw = ctx.measureText(vStr).width;
       ctx.font = '400 18px ' + FONT; ctx.fillStyle = '#8a96a3';
-      ctx.fillText(u, bx + 20 + ctx.measureText(String(v)).width + 6, cy0 + 482);
+      ctx.fillText(u, bx + 18 + vw + 6, cy0 + 488);
     });
 
     // 完成课程
