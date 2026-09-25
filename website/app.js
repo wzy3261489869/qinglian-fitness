@@ -1327,14 +1327,163 @@ function renderStats() {
 }
 
 /* ================= 我的页 ================= */
-function editField(label, key, type) {
-  const v = prompt(`请输入${label}`, profile[key]);
-  if (v === null) return;
-  const num = parseFloat(v);
-  if (type === 'num' && (isNaN(num) || num <= 0)) { toast('请输入有效数字'); return; }
-  profile[key] = type === 'num' ? num : String(v).slice(0, 12);
-  saveProfile(); renderMine(); toast('已保存');
+
+/* ---------- 居中弹层系统 ---------- */
+const ITEM_H = 44;          // 滚轮每行高度
+const VISIBLE_ROWS = 5;     // 滚轮可见行数（奇数，中心为选中行）
+let sheetEl = null;
+
+function closeSheet() {
+  if (!sheetEl) return;
+  const el = sheetEl; sheetEl = null;
+  document.body.classList.remove('sheet-open');
+  el.classList.remove('show');
+  setTimeout(() => el.remove(), 220);
 }
+
+/* Esc 关闭弹层 */
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+
+function mountSheet(innerHTML) {
+  closeSheet();
+  sheetEl = document.createElement('div');
+  sheetEl.className = 'sheet-root';
+  sheetEl.innerHTML = `<div class="sheet-mask"></div><div class="sheet-card">${innerHTML}</div>`;
+  document.body.appendChild(sheetEl);
+  $('.sheet-mask', sheetEl).addEventListener('click', closeSheet);
+  document.body.classList.add('sheet-open');
+  requestAnimationFrame(() => requestAnimationFrame(() => sheetEl.classList.add('show')));
+  return sheetEl;
+}
+
+/* 文本填写弹层（昵称等） */
+function openTextSheet(title, value, maxLen, onConfirm) {
+  const root = mountSheet(`
+    <div class="sheet-head"><b>${esc(title)}</b></div>
+    <input class="sheet-input" id="sheetInput" maxlength="${maxLen}" value="${esc(value)}" enterkeyhint="done"/>
+    <div class="sheet-btns">
+      <button type="button" class="btn ghost" id="sheetCancel">取消</button>
+      <button type="button" class="btn" id="sheetOk">确定</button>
+    </div>`);
+  const input = $('#sheetInput', root);
+  setTimeout(() => { input.focus(); input.select(); }, 120);
+  $('#sheetCancel', root).addEventListener('click', closeSheet);
+  const submit = () => {
+    const v = input.value.trim();
+    if (!v) { toast('内容不能为空'); return; }
+    closeSheet(); onConfirm(v.slice(0, maxLen));
+  };
+  $('#sheetOk', root).addEventListener('click', submit);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+}
+
+/* 数字滚轮弹层：min~max，step 步进；上下滑动 / 鼠标滚轮 / 点击某行均可 */
+function openWheelSheet(cfg, onConfirm) {
+  const { title, unit, min, max, step, value, dec } = cfg;
+  const count = Math.round((max - min) / step) + 1;
+  const at = v => Math.round((v - min) / step);
+  const fmt = i => {
+    const v = Math.round((min + i * step) * 100) / 100;
+    return dec ? v.toFixed(dec) : String(v);
+  };
+  let rows = '';
+  for (let i = 0; i < count; i++) rows += `<div class="wheel-item">${fmt(i)}</div>`;
+
+  const root = mountSheet(`
+    <div class="sheet-head"><b>${esc(title)}</b><span class="sheet-unit">${esc(unit)}</span></div>
+    <div class="wheel">
+      <div class="wheel-fade top"></div><div class="wheel-fade bot"></div>
+      <div class="wheel-band"></div>
+      <div class="wheel-list" id="wheelList">
+        <div class="wheel-spacer"></div>${rows}<div class="wheel-spacer"></div>
+      </div>
+    </div>
+    <div class="sheet-btns">
+      <button type="button" class="btn ghost" id="sheetCancel">取消</button>
+      <button type="button" class="btn" id="sheetOk">确定</button>
+    </div>`);
+
+  const list = $('#wheelList', root);
+  const itemEls = [...list.querySelectorAll('.wheel-item')];
+  let idx = Math.min(count - 1, Math.max(0, at(Math.round(value * 100) / 100)));
+  // 初始定位（浏览器布局完成后）
+  requestAnimationFrame(() => { list.scrollTop = idx * ITEM_H; });
+  const readIdx = () => Math.min(count - 1, Math.max(0, Math.round(list.scrollTop / ITEM_H)));
+  const markSel = i => itemEls.forEach((el, j) => el.classList.toggle('sel', j === i));
+  markSel(idx);
+
+  let snapTimer = null;
+  list.addEventListener('scroll', () => {
+    idx = readIdx(); markSel(idx);
+    clearTimeout(snapTimer);
+    // 滚动停止后吸附到最近行（触摸惯性结束时）
+    snapTimer = setTimeout(() => {
+      const target = idx * ITEM_H;
+      if (Math.abs(list.scrollTop - target) > 1) list.scrollTo({ top: target, behavior: 'smooth' });
+    }, 90);
+  });
+  // 鼠标滚轮：逐行滚动（桌面端体验）
+  list.addEventListener('wheel', e => {
+    e.preventDefault();
+    idx = Math.min(count - 1, Math.max(0, idx + (e.deltaY > 0 ? 1 : -1)));
+    list.scrollTo({ top: idx * ITEM_H, behavior: 'smooth' });
+  }, { passive: false });
+  // 点击某行直接滚过去
+  list.addEventListener('click', e => {
+    const item = e.target.closest('.wheel-item');
+    if (!item) return;
+    idx = itemEls.indexOf(item);
+    list.scrollTo({ top: idx * ITEM_H, behavior: 'smooth' });
+  });
+
+  $('#sheetCancel', root).addEventListener('click', closeSheet);
+  $('#sheetOk', root).addEventListener('click', () => {
+    idx = readIdx();
+    const v = Math.round((min + idx * step) * 100) / 100;
+    closeSheet(); onConfirm(v);
+  });
+}
+
+/* 性别选择弹层（两张大卡片） */
+function openGenderSheet(value, onConfirm) {
+  const card = (g, color, paths) => `
+    <button type="button" class="gcard ${g === value ? 'active' : ''}" data-g="${g}">
+      <svg viewBox="0 0 24 24" width="34" height="34" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${paths}</svg>
+      <b>${g}</b>
+    </button>`;
+  const root = mountSheet(`
+    <div class="sheet-head"><b>选择性别</b></div>
+    <div class="gcard-row">
+      ${card('男', '#165dff', '<circle cx="10" cy="10" r="3.4"/><path d="M12.6 7.4 19 1"/><path d="M15.2 1H19v3.8"/>')}
+      ${card('女', '#ec4899', '<circle cx="12" cy="8" r="3.4"/><path d="M12 11.4v9.6"/><path d="M8.2 16.2h7.6"/>')}
+    </div>
+    <div class="sheet-btns"><button type="button" class="btn full" id="sheetCancel2">关闭</button></div>`);
+  root.querySelectorAll('.gcard').forEach(b => b.addEventListener('click', () => {
+    if (b.dataset.g === value) { closeSheet(); return; }
+    const g = b.dataset.g; closeSheet(); onConfirm(g);
+  }));
+  $('#sheetCancel2', root).addEventListener('click', closeSheet);
+}
+
+const FIELD_CONF = {
+  age:          { title: '年龄',     unit: '岁',  min: 10, max: 100, step: 1,   dec: 0 },
+  height:       { title: '身高',     unit: 'cm',  min: 130, max: 210, step: 1,   dec: 0 },
+  weight:       { title: '体重',     unit: 'kg',  min: 30, max: 200, step: 0.1, dec: 1 },
+  targetWeight: { title: '目标体重', unit: 'kg',  min: 30, max: 200, step: 0.1, dec: 1 }
+};
+function editField(label, key) {
+  const cfg = Object.assign({ value: profile[key] }, FIELD_CONF[key]);
+  openWheelSheet(cfg, v => {
+    profile[key] = v; saveProfile(); renderMine(); toast(`${cfg.title}已更新为 ${v} ${cfg.unit}`);
+  });
+}
+function genderMeta() {
+  const male = profile.gender !== '女';
+  return male
+    ? { color: '#165dff', bg: 'rgba(22,93,255,.10)', paths: '<circle cx="10" cy="10" r="3.6"/><path d="M12.7 7.3 19 1"/><path d="M15 1h4v4"/>' }
+    : { color: '#ec4899', bg: 'rgba(236,72,153,.10)', paths: '<circle cx="12" cy="8" r="3.6"/><path d="M12 11.6v9.8"/><path d="M8 16.5h8"/>' };
+}
+const GO_ARROW_SVG = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--primary)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9.2 4.6 16.6 12l-7.4 7.4"/></svg>';
 function renderMine() {
   const bmi = bmiInfo();
   const totalK = records.reduce((s, r) => s + r.kcal, 0);
@@ -1348,7 +1497,9 @@ function renderMine() {
   ];
   $('#app').innerHTML = `
     <div class="profile-hero">
-      <img src="${cover(64)}" alt="头像"/>
+      <span class="pf-avatar" style="background:${genderMeta().bg};color:${genderMeta().color}">
+        <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${genderMeta().paths}</svg>
+      </span>
       <div>
         <div class="pn">${esc(profile.nickname)}</div>
         <div class="pg">${goalTag(profile.goal)} <span style="margin-left:8px">${esc(profile.gender)} · ${profile.age} 岁</span></div>
@@ -1358,20 +1509,37 @@ function renderMine() {
     <div class="mine-col mine-col-l">
     <div class="card">
       <h3>身体数据</h3>
-      <div class="bmi-visual" style="margin-bottom:8px">
-        <div class="bmi-num" style="background:${bmi.color}22;color:${bmi.color}">
-          <b>${bmi.v.toFixed(1)}</b><span>BMI · ${bmi.status}</span>
+      <div class="bmi-visual">
+        <div class="bmi-num" style="background:${bmi.color}1a;color:${bmi.color}">
+          <span class="bm-tag">BMI</span>
+          <b>${bmi.v.toFixed(1)}</b>
+          <span class="bm-st">${bmi.status}</span>
         </div>
-        <div style="flex:1">
-          <p class="muted">身高 ${profile.height} cm · 体重 ${fmtWeight(profile.weight)} kg · 目标 ${fmtWeight(profile.targetWeight)} kg</p>
-          <p class="muted" style="margin-top:4px">距离目标还差 ${fmtWeight(Math.abs(profile.weight - profile.targetWeight))} kg，${profile.weight > profile.targetWeight ? '坚持控糖+有氧' : '加强力量+蛋白质'} 💪</p>
+        <div class="bmi-side">
+          <p class="bs-gap">距目标还差 <b style="color:${bmi.color}">${fmtWeight(Math.abs(profile.weight - profile.targetWeight))} kg</b></p>
+          <p class="muted">${profile.weight > profile.targetWeight ? '坚持控糖 + 有氧' : '加强力量 + 蛋白质'}，稳步接近目标</p>
         </div>
       </div>
-      <div class="bmi-row" id="rowAge"><span class="bl">年龄</span><span class="bv">${profile.age} 岁</span></div>
-      <div class="bmi-row" id="rowH"><span class="bl">身高</span><span class="bv">${profile.height} cm</span></div>
-      <div class="bmi-row" id="rowW"><span class="bl">体重</span><span class="bv">${fmtWeight(profile.weight)} kg · 点击更新曲线</span></div>
-      <div class="bmi-row" id="rowTW"><span class="bl">目标体重</span><span class="bv">${fmtWeight(profile.targetWeight)} kg</span></div>
-      <div class="bmi-row" id="rowBody"><span class="bl">体脂 / 围度</span><span class="bv">📊 记录体脂与各部位围度曲线 ›</span></div>
+      <div class="data-rows">
+        <div class="bmi-row" id="rowGender">
+          <span class="bl">性别</span><span class="bv">${esc(profile.gender)}</span><span class="go-btn">${GO_ARROW_SVG}</span>
+        </div>
+        <div class="bmi-row" id="rowAge">
+          <span class="bl">年龄</span><span class="bv">${profile.age}<em>岁</em></span><span class="go-btn">${GO_ARROW_SVG}</span>
+        </div>
+        <div class="bmi-row" id="rowH">
+          <span class="bl">身高</span><span class="bv">${profile.height}<em>cm</em></span><span class="go-btn">${GO_ARROW_SVG}</span>
+        </div>
+        <div class="bmi-row" id="rowW">
+          <span class="bl">体重</span><span class="bv">${fmtWeight(profile.weight)}<em>kg</em></span><span class="go-btn">${GO_ARROW_SVG}</span>
+        </div>
+        <div class="bmi-row" id="rowTW">
+          <span class="bl">目标体重</span><span class="bv">${fmtWeight(profile.targetWeight)}<em>kg</em></span><span class="go-btn">${GO_ARROW_SVG}</span>
+        </div>
+        <div class="bmi-row" id="rowBody">
+          <span class="bl">体脂 / 围度</span><span class="bv muted">记录与趋势</span><span class="go-btn">${GO_ARROW_SVG}</span>
+        </div>
+      </div>
     </div>
     <div class="card">
       <h3>体重 · 饮食趋势（近 14 天）</h3>
@@ -1445,11 +1613,16 @@ function renderMine() {
     </div>
     </div>
   `;
-  $('#editNick').addEventListener('click', () => editField('昵称', 'nickname', 'text'));
-  $('#rowAge').addEventListener('click', () => editField('年龄', 'age', 'num'));
-  $('#rowH').addEventListener('click', () => editField('身高（cm）', 'height', 'num'));
+  $('#editNick').addEventListener('click', () => openTextSheet('修改昵称', profile.nickname, 12, v => {
+    profile.nickname = v; saveProfile(); renderMine(); toast('昵称已更新');
+  }));
+  $('#rowGender').addEventListener('click', () => openGenderSheet(profile.gender, g => {
+    profile.gender = g; saveProfile(); renderMine(); toast('性别已选择：' + g);
+  }));
+  $('#rowAge').addEventListener('click', () => editField('年龄', 'age'));
+  $('#rowH').addEventListener('click', () => editField('身高', 'height'));
   $('#rowW').addEventListener('click', () => DietModule.openWeight());
-  $('#rowTW').addEventListener('click', () => editField('目标体重（kg）', 'targetWeight', 'num'));
+  $('#rowTW').addEventListener('click', () => editField('目标体重', 'targetWeight'));
   $('#rowBody').addEventListener('click', () => window.BodyModule.open());
   $$('#app [data-goal]').forEach(el => el.addEventListener('click', () => {
     profile.goal = el.dataset.goal; saveProfile(); renderMine(); toast('目标已切换为 ' + profile.goal);
@@ -1555,6 +1728,7 @@ function showLoginGate() {
   gate.classList.add('on');
   $('#app').style.visibility = 'hidden';
   $('#tabbar').style.display = 'none';
+  $$('#gateGender .lg-g-i').forEach(b => b.classList.toggle('active', b.dataset.g === profile.gender));
   setGateMode('login');
   // 预热：进登录页就 ping 一次数据库（后端 health 会异步 SELECT 1 唤醒 Neon），
   // 用户填用户名密码的几秒钟里连接已焐热，首次登录不再冷启动超时
@@ -1570,6 +1744,10 @@ function showLoginGate() {
       if (gateMode === 'login') { setGateMode('reg'); $('#gateUser').focus(); }
       else setGateMode('login');
     });
+    $$('#gateGender .lg-g-i').forEach(btn => btn.addEventListener('click', () => {
+      $$('#gateGender .lg-g-i').forEach(b => b.classList.toggle('active', b === btn));
+      hideGateError();
+    }));
     // 输入时实时校验并清除顶部错误
     $('#gateUser').addEventListener('input', e => {
       hideGateError();
@@ -1619,6 +1797,8 @@ async function gateAuth(mode) {
   if (r.ok) {
     auth = { token: r.token, username: r.username, apiBase: auth.apiBase };
     store.set('auth', auth);
+    const gEl = $('#gateGender .lg-g-i.active');
+    if (gEl && profile.gender !== gEl.dataset.g) { profile.gender = gEl.dataset.g; saveProfile(); }
     toast(mode === 'reg' ? '注册成功 🎉' : '欢迎回来，' + r.username);
     hideLoginGate();
     // 登录后若本地无数据且云端有，自动恢复

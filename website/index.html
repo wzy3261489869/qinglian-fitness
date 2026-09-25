@@ -53,6 +53,19 @@
             autocomplete="current-password" enterkeyhint="go" maxlength="40" />
           <p class="field-msg" id="gatePassMsg" aria-live="polite"></p>
         </div>
+        <div class="lg-field">
+          <span class="lg-label">性别</span>
+          <div class="lg-gender" id="gateGender">
+            <button type="button" class="lg-g-i" data-g="男">
+              <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#165dff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="3.4"/><path d="M12.6 7.4 19 1"/><path d="M15.2 1H19v3.8"/></svg>
+              <b>男</b>
+            </button>
+            <button type="button" class="lg-g-i" data-g="女">
+              <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#ec4899" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.4"/><path d="M12 11.4v9.6"/><path d="M8.2 16.2h7.6"/></svg>
+              <b>女</b>
+            </button>
+          </div>
+        </div>
         <p class="lg-error" id="gateError" role="alert" hidden></p>
         <div class="lg-btns">
           <button type="submit" id="gateLoginBtn" class="lg-primary">登录</button>
