@@ -714,6 +714,8 @@ function showTab(tab) {
   if (tab === 'stats') {
     if (recordsView === 'diet') renderDiet();
     else renderStats();
+  } else if (tab === 'outdoor') {
+    if (window.RunModule) RunModule.renderTab();
   } else {
     ({ home: renderHome, plan: renderPlan, mine: renderMine })[tab]();
   }
@@ -1393,15 +1395,15 @@ function renderStats() {
         ${recent.length ? recent.map(r => `
           <div class="rec">
             <div class="rec-main">
-              <b class="rec-title">${r.type === 'run' ? '🏃 ' : ''}${esc(r.planTitle)}</b>
-              <span class="rec-meta">${r.date} · ${r.type === 'run' ? '户外 GPS' : r.doneCount + '/' + r.total + ' 动作'}
+              <b class="rec-title">${esc(r.planTitle)}</b>
+              <span class="rec-meta">${r.date} · ${r.type === 'run' || r.type === 'ride' ? (r.type === 'ride' ? '户外骑行 GPS' : '户外跑步 GPS') : r.doneCount + '/' + r.total + ' 动作'}
                 <span class="share-link" data-rw="share-date" data-date="${r.date}">海报</span>
                 <span class="del" data-del="${r.id}">删除</span>
               </span>
             </div>
             <div class="rec-data">
               <div class="rd-main"><b>${grp(r.kcal)}</b><i>千卡</i></div>
-              <div class="rd-sub">${r.type === 'run' && r.distanceKm != null ? r.distanceKm.toFixed(2) + ' km · ' : ''}${r.minutes} 分钟</div>
+              <div class="rd-sub">${(r.type === 'run' || r.type === 'ride') && r.distanceKm != null ? r.distanceKm.toFixed(2) + ' km · ' : ''}${r.minutes} 分钟</div>
             </div>
           </div>`).join('') : emptyHTML('record', '还没有训练记录', '完成第一次训练后，数据会出现在这里',
             '<button class="btn" id="statsEmptyCta">去开始第一次训练</button>')}

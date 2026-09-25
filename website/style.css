@@ -2150,4 +2150,63 @@ body.sheet-open { overflow: hidden; }
 /* ---------- 身体维度排版补正（删图标后） ---------- */
 .bd-li { display: none; }
 
+/* ============================================================
+   户外运动 tab（跑步 / 骑行选择 + 最近户外记录）
+   ============================================================ */
+.od-page { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+.od-picks { display: grid; gap: 12px; margin: 4px 0 20px; }
+.od-pick {
+  display: flex; align-items: center; gap: 14px;
+  width: 100%; padding: 16px; text-align: left; cursor: pointer;
+  background: var(--bg-card); border: 1px solid var(--border);
+  border-radius: 16px;
+  transition: transform .12s var(--ease), border-color .2s var(--ease);
+}
+.od-pick:active { transform: scale(.975); border-color: rgba(0, 181, 120, .35); }
+.od-ic {
+  flex-shrink: 0; width: 46px; height: 46px; border-radius: 13px;
+  display: flex; align-items: center; justify-content: center;
+}
+.od-ic.run  { background: rgba(0, 181, 120, .12); color: var(--primary); }
+.od-ic.ride { background: rgba(22, 93, 255, .1);  color: #165dff; }
+.od-tx { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.od-tx b { font-size: 17px; font-weight: 600; color: var(--text-1); }
+.od-tx small { font-size: 13px; color: var(--text-3); }
+.od-go {
+  flex-shrink: 0; font-size: 24px; line-height: 1;
+  color: var(--text-3); font-weight: 300;
+}
+
+/* 最近户外运动列表 */
+.od-hi {
+  display: flex; align-items: center; gap: 12px;
+  padding: 13px 0; border-bottom: 1px solid var(--divider);
+}
+.od-hi:last-child { border-bottom: none; padding-bottom: 2px; }
+.od-hi:first-child { padding-top: 4px; }
+.od-tag {
+  flex-shrink: 0; font-size: 12px; font-weight: 600;
+  padding: 3px 10px; border-radius: var(--r-pill);
+}
+.od-tag.run  { color: var(--primary); background: rgba(0, 181, 120, .12); }
+.od-tag.ride { color: #165dff; background: rgba(22, 93, 255, .1); }
+.od-hi-km {
+  font-size: 15px; font-weight: 600; color: var(--text-1);
+  font-variant-numeric: tabular-nums;
+}
+.od-hi-km i { font-size: 12px; font-style: normal; font-weight: 400; color: var(--text-3); }
+.od-hi-r {
+  margin-left: auto; display: flex; flex-direction: column;
+  align-items: flex-end; gap: 1px; flex-shrink: 0;
+}
+.od-hi-r b {
+  font-size: 14px; font-weight: 600; color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+.od-hi-r b i { font-size: 11px; font-style: normal; font-weight: 400; color: var(--text-3); }
+.od-hi-r small { font-size: 11px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+
+/* 深色底图时地图容器背景 */
+:root[data-theme="dark"] .run-map { background: #1a1d1c; }
+
 

@@ -449,6 +449,7 @@
     clock:  '<circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 2"/>',
     apple:  '<path d="M12 8.2c-1.6-1.9-4.2-2.1-6-.3C3.9 9.8 5 14.7 7.5 18.2c1 1.4 2 2 3 1.5.7-.4 2.3-.4 3 0 1 .5 2-.1 3-1.5 2.5-3.5 3.6-8.4 1.5-10.3-1.8-1.8-4.4-1.6-6 .3z"/><path d="M12 8c0-2 .8-3.5 2.5-4.5"/>',
     run:    '<circle cx="15" cy="4.6" r="1.8"/><path d="M5.5 20l3.6-4.6L7.6 12l4.2-3.2 3 1.6L17.5 8"/><path d="M11.8 8.8l2.4 3.2 3.6 1M7.6 12l-2 3.2"/>',
+    bike:   '<circle cx="6.5" cy="16.5" r="2.9"/><circle cx="17.5" cy="16.5" r="2.9"/><path d="M6.5 16.5 10 9.6h5l2.5 6.9"/><path d="M10 9.6 11.4 6.8h2.6M12.6 12.8l1.3-3.2"/>',
     image:  '<rect x="3.5" y="5" width="17" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="M4.5 17.5 10 12l3.5 3.5 2.5-2.5 4 4"/>',
     ruler:  '<rect x="3" y="9" width="18" height="6" rx="1.5"/><path d="M7 9v2.5M11 9v2.5M15 9v2.5"/>'
   };
@@ -471,6 +472,8 @@
     { id: 'diet7',  name: '饮食管家',   desc: '记录饮食满 7 天',      color: '#00b578', glyph: GLYPHS.apple,  test: d => d.dietDays >= 7 },
     { id: 'run1',   name: '首次开跑',   desc: '完成第 1 次户外跑步',  color: '#0ea5e9', glyph: GLYPHS.run,    test: d => d.runs >= 1 },
     { id: 'run5',   name: '跑者养成',   desc: '完成 5 次户外跑步',    color: '#165dff', glyph: GLYPHS.run,    test: d => d.runs >= 5 },
+    { id: 'ride1',  name: '首次骑行',   desc: '完成第 1 次户外骑行',  color: '#14b8a6', glyph: GLYPHS.bike,   test: d => d.rides >= 1 },
+    { id: 'ride5',  name: '骑行达人',   desc: '完成 5 次户外骑行',    color: '#f59e0b', glyph: GLYPHS.bike,   test: d => d.rides >= 5 },
     { id: 'poster', name: '高光时刻',   desc: '生成并下载训练海报',   color: '#ec4899', glyph: GLYPHS.image,  test: d => d.poster },
     { id: 'body1',  name: '了解自己',   desc: '第 1 次记录体脂 / 围度', color: '#7c3aed', glyph: GLYPHS.ruler, test: d => d.body >= 1 }
   ];
@@ -484,6 +487,7 @@
       diet: dietEntries.length,
       dietDays: new Set(dietEntries.map(x => x.date)).size,
       runs: records.filter(r => r.type === 'run').length,
+      rides: records.filter(r => r.type === 'ride').length,
       poster: !!store.get('achPoster', false),
       body: Object.keys(store.get('bodyMap', {}) || {}).length
     };
