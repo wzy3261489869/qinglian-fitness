@@ -279,7 +279,7 @@
       <div class="poster-preview" id="posterBox"><div class="poster-loading">🎨 正在绘制海报…</div></div>
       <div class="modal-btns">
         <button class="btn ghost" id="posterCancel">关闭</button>
-        <button class="btn mega" id="posterDownload">⬇ 下载图片</button>
+        <button class="btn" id="posterDownload" style="gap:6px"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11m0 0-4-4m4 4 4-4"/><path d="M4.5 19.5h15"/></svg>下载图片</button>
       </div>
     </div>`;
     document.body.appendChild(mask);
@@ -302,6 +302,8 @@
       a.href = url; a.download = '肌肉会飞训练海报-' + date + '.png';
       document.body.appendChild(a); a.click(); a.remove();
       toast('海报已保存到下载，记得分享哦 🎉');
+      store.set('achPoster', true);
+      checkAchievements();
     });
   }
 
@@ -435,6 +437,154 @@
   }
 
   /* =====================================================================
+   * 5. 成就系统：彩色简约徽章 · 获得庆祝弹窗（训练中不打扰）· 成就墙
+   * ===================================================================== */
+  const GLYPHS = {
+    flag:   '<path d="M6 21V4"/><path d="M6 5c4-2 8 2 12 0v8c-4 2-8-2-12 0"/>',
+    medal:  '<circle cx="12" cy="14.5" r="4.5"/><path d="M9 10.5 6.5 4h4l1.5 3.5L13.5 4h4L15 10.5"/>',
+    trophy: '<path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 5.5H4.8a3.2 3.2 0 0 0 3.4 3.2M16 5.5h3.2a3.2 3.2 0 0 1-3.4 3.2"/><path d="M12 13v3.5"/><path d="M8.5 20h7"/>',
+    crown:  '<path d="M4.5 17 6 8.5l3.8 3.2L12 6.5l2.2 5.2L18 8.5 19.5 17z"/><path d="M6.5 20.5h11"/>',
+    flame:  '<path d="M12 3c1.5 3.5 5 5 5 9.5a5 5 0 0 1-10 0C7 8.5 10.5 6.5 12 3z"/><path d="M12 20.5a2.8 2.8 0 0 1-2.8-2.8c0-1.8 1.4-2.7 2.8-4.2 1.4 1.5 2.8 2.4 2.8 4.2A2.8 2.8 0 0 1 12 20.5z"/>',
+    bolt:   '<path d="M13 3 5 13.5h5L10.5 21 19 10h-5z"/>',
+    clock:  '<circle cx="12" cy="12" r="8"/><path d="M12 7.5V12l3 2"/>',
+    apple:  '<path d="M12 8.2c-1.6-1.9-4.2-2.1-6-.3C3.9 9.8 5 14.7 7.5 18.2c1 1.4 2 2 3 1.5.7-.4 2.3-.4 3 0 1 .5 2-.1 3-1.5 2.5-3.5 3.6-8.4 1.5-10.3-1.8-1.8-4.4-1.6-6 .3z"/><path d="M12 8c0-2 .8-3.5 2.5-4.5"/>',
+    run:    '<circle cx="15" cy="4.6" r="1.8"/><path d="M5.5 20l3.6-4.6L7.6 12l4.2-3.2 3 1.6L17.5 8"/><path d="M11.8 8.8l2.4 3.2 3.6 1M7.6 12l-2 3.2"/>',
+    image:  '<rect x="3.5" y="5" width="17" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="M4.5 17.5 10 12l3.5 3.5 2.5-2.5 4 4"/>',
+    ruler:  '<rect x="3" y="9" width="18" height="6" rx="1.5"/><path d="M7 9v2.5M11 9v2.5M15 9v2.5"/>'
+  };
+  const ACH_DEFS = [
+    { id: 'first',  name: '首次训练',   desc: '完成第 1 次训练',      color: '#00b578', glyph: GLYPHS.flag,   test: d => d.trains >= 1 },
+    { id: 't10',    name: '十次之约',   desc: '累计完成 10 次训练',   color: '#165dff', glyph: GLYPHS.medal,  test: d => d.trains >= 10 },
+    { id: 't30',    name: '三十进阶',   desc: '累计完成 30 次训练',   color: '#7c3aed', glyph: GLYPHS.medal,  test: d => d.trains >= 30 },
+    { id: 't50',    name: '半百征程',   desc: '累计完成 50 次训练',   color: '#ff7a1a', glyph: GLYPHS.trophy, test: d => d.trains >= 50 },
+    { id: 't100',   name: '百次传奇',   desc: '累计完成 100 次训练',  color: '#e64545', glyph: GLYPHS.crown,  test: d => d.trains >= 100 },
+    { id: 's3',     name: '连续 3 天',  desc: '连续打卡 3 天',        color: '#0ea5e9', glyph: GLYPHS.flame,  test: d => d.streak >= 3 },
+    { id: 's7',     name: '连续 7 天',  desc: '连续打卡 7 天',        color: '#00b578', glyph: GLYPHS.flame,  test: d => d.streak >= 7 },
+    { id: 's14',    name: '双周不断',   desc: '连续打卡 14 天',       color: '#165dff', glyph: GLYPHS.flame,  test: d => d.streak >= 14 },
+    { id: 's30',    name: '月度铁人',   desc: '连续打卡 30 天',       color: '#e64545', glyph: GLYPHS.flame,  test: d => d.streak >= 30 },
+    { id: 'k1000',  name: '燃烧 1000',  desc: '累计消耗 1,000 千卡',  color: '#ff7a1a', glyph: GLYPHS.bolt,   test: d => d.kcal >= 1000 },
+    { id: 'k5000',  name: '燃烧 5000',  desc: '累计消耗 5,000 千卡',  color: '#e64545', glyph: GLYPHS.bolt,   test: d => d.kcal >= 5000 },
+    { id: 'k10000', name: '万卡俱乐部', desc: '累计消耗 10,000 千卡', color: '#c026d3', glyph: GLYPHS.bolt,   test: d => d.kcal >= 10000 },
+    { id: 'm1000',  name: '千分钟',     desc: '累计训练 1,000 分钟',  color: '#0ea5e9', glyph: GLYPHS.clock,  test: d => d.min >= 1000 },
+    { id: 'm5000',  name: '五千分钟',   desc: '累计训练 5,000 分钟',  color: '#165dff', glyph: GLYPHS.clock,  test: d => d.min >= 5000 },
+    { id: 'diet1',  name: '好好吃饭',   desc: '第 1 次记录饮食',      color: '#65a30d', glyph: GLYPHS.apple,  test: d => d.diet >= 1 },
+    { id: 'diet7',  name: '饮食管家',   desc: '记录饮食满 7 天',      color: '#00b578', glyph: GLYPHS.apple,  test: d => d.dietDays >= 7 },
+    { id: 'run1',   name: '首次开跑',   desc: '完成第 1 次户外跑步',  color: '#0ea5e9', glyph: GLYPHS.run,    test: d => d.runs >= 1 },
+    { id: 'run5',   name: '跑者养成',   desc: '完成 5 次户外跑步',    color: '#165dff', glyph: GLYPHS.run,    test: d => d.runs >= 5 },
+    { id: 'poster', name: '高光时刻',   desc: '生成并下载训练海报',   color: '#ec4899', glyph: GLYPHS.image,  test: d => d.poster },
+    { id: 'body1',  name: '了解自己',   desc: '第 1 次记录体脂 / 围度', color: '#7c3aed', glyph: GLYPHS.ruler, test: d => d.body >= 1 }
+  ];
+  const achUnlocked = () => store.get('achUnlocked', {}) || {};
+  function achData() {
+    return {
+      trains: records.length,
+      kcal: records.reduce((s, r) => s + r.kcal, 0),
+      min: records.reduce((s, r) => s + r.minutes, 0),
+      streak: streakDays(),
+      diet: dietEntries.length,
+      dietDays: new Set(dietEntries.map(x => x.date)).size,
+      runs: records.filter(r => r.type === 'run').length,
+      poster: !!store.get('achPoster', false),
+      body: Object.keys(store.get('bodyMap', {}) || {}).length
+    };
+  }
+  // 徽章 SVG：彩色圆底 + 白色线性图标；off=true 为未获得（灰化）
+  function achBadge(a, size, off) {
+    return `<svg viewBox="0 0 48 48" width="${size}" height="${size}" aria-hidden="true">` +
+      `<circle cx="24" cy="24" r="23" fill="${a.color}"${off ? ' opacity=".22"' : ''}/>` +
+      `<g fill="none" stroke="${off ? 'var(--text-3)' : '#fff'}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" transform="translate(12 12)">${a.glyph}</g>` +
+      `</svg>`;
+  }
+  /* 训练 / 跑步进行中不打扰：成就弹窗排队，每 3 秒重试直到训练页关闭 */
+  const isExercising = () => !!document.querySelector('.subpage.show.workout-page, .subpage.show.tp-sess-page, .subpage.show.run-page');
+  let achQueue = [], achShowing = false, achRetryT = null;
+  function checkAchievements() {
+    const d = achData(), got = achUnlocked();
+    const fresh = ACH_DEFS.filter(a => !got[a.id] && a.test(d));
+    if (!fresh.length) return;
+    fresh.forEach(a => { got[a.id] = todayStr(); });
+    store.set('achUnlocked', got);
+    // 一次解锁多个（如云端恢复）：只庆祝最高级别的最后一个，其余静默点亮
+    achQueue.push(fresh[fresh.length - 1]);
+    pumpAchQueue();
+  }
+  function pumpAchQueue() {
+    if (achShowing || !achQueue.length) return;
+    if (isExercising()) {
+      clearTimeout(achRetryT);
+      achRetryT = setTimeout(pumpAchQueue, 3000);
+      return;
+    }
+    const a = achQueue.shift();
+    achShowing = true;
+    showCelebrate(a, () => { achShowing = false; pumpAchQueue(); });
+  }
+  function showCelebrate(a, onClose) {
+    const mask = document.createElement('div');
+    mask.className = 'modal-mask modal-center ach-mask';
+    const colors = ['#00b578', '#ff7a1a', '#165dff', '#ec4899', '#f7b500', '#7c3aed'];
+    const confetti = Array.from({ length: 14 }, (_, i) =>
+      `<i class="cf-p" style="--i:${i};--c:${colors[i % 6]}"></i>`).join('');
+    mask.innerHTML = `<div class="modal ach-modal" role="alertdialog" aria-modal="true">
+      <div class="ach-confetti" aria-hidden="true">${confetti}</div>
+      <div class="ach-badge-big">${achBadge(a, 88)}</div>
+      <h3>获得新成就</h3>
+      <b class="ach-name">${esc(a.name)}</b>
+      <p class="muted">${esc(a.desc)}</p>
+      <div class="modal-btns"><button type="button" class="btn full" id="achOk">太棒了</button></div>
+    </div>`;
+    document.body.appendChild(mask);
+    const close = () => { mask.remove(); onClose(); };
+    $('#achOk', mask).addEventListener('click', close);
+    mask.addEventListener('click', e => { if (e.target === mask) close(); });
+  }
+  /* 「我的」页成就入口卡：只显示进度摘要 + 最近点亮的徽章，全部成就进成就墙 */
+  function achEntryHTML() {
+    const got = achUnlocked();
+    const gotList = ACH_DEFS.filter(a => got[a.id]);
+    const recent = gotList.slice(-3);
+    return `<div class="card ach-entry" id="achEntry" role="button" aria-label="查看成就墙">
+      <h3>我的成就</h3>
+      <div class="ach-entry-main">
+        <div class="ach-mini">${recent.length
+          ? recent.map(a => achBadge(a, 34)).join('')
+          : '<span class="muted" style="font-size:13px">还没有点亮成就</span>'}</div>
+        <div class="ach-entry-tx"><b>${gotList.length}<em> / ${ACH_DEFS.length}</em></b><small>已点亮成就</small></div>
+        <span class="go-btn"><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--primary)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9.2 4.6 16.6 12l-7.4 7.4"/></svg></span>
+      </div>
+    </div>`;
+  }
+  /* 成就墙子页 */
+  function openAchievements() {
+    const got = achUnlocked();
+    const n = ACH_DEFS.filter(a => got[a.id]).length;
+    const pct = Math.round(n / ACH_DEFS.length * 100);
+    $('#app').innerHTML = `
+      <div class="body-page ach-page">
+        <div class="sp-head"><span class="back" id="achBack" role="button" aria-label="返回">‹</span><b>成就墙</b></div>
+        <div class="sp-body">
+          <div class="card ach-overview">
+            <div class="ach-ov-num"><b>${n}</b><span> / ${ACH_DEFS.length} 已点亮</span></div>
+            <div class="ach-ov-bar"><i style="width:${pct}%"></i></div>
+            <p class="muted">保持训练节奏，点亮更多成就徽章</p>
+          </div>
+          <div class="ach-wall">
+            ${ACH_DEFS.map(a => {
+              const on = !!got[a.id];
+              return `<div class="ach-cell ${on ? 'on' : ''}">
+                ${achBadge(a, 52, !on)}
+                <b>${esc(a.name)}</b>
+                <small>${on ? got[a.id].slice(5).replace('-', '/') + ' 获得' : esc(a.desc)}</small>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>
+      </div>`;
+    $('#achBack').addEventListener('click', () => showTab('mine'));
+    window.scrollTo(0, 0);
+  }
+
+  /* =====================================================================
    * 事件委托
    * ===================================================================== */
   document.addEventListener('click', (e) => {
@@ -502,7 +652,8 @@
 
   /* ---------------- 对外 API ---------------- */
   window.RewardsModule = {
-    heatmapHTML, reminderHTML, encouragementHTML, openShare
+    heatmapHTML, reminderHTML, encouragementHTML, openShare,
+    checkAchievements, achEntryHTML, openAchievements
   };
 
   // 页面打开即启动提醒检查（无论在哪个 Tab）

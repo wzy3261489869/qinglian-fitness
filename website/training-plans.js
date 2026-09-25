@@ -708,9 +708,9 @@
         persistSess(); closeSession(); toast('进度已保留，稍后可恢复');
         break;
       case 'tp-quit':
-        if (confirm('确定放弃本次训练？当前进度将被清除')) {
-          closeSession(); store.set('tp_session', null); toast('训练已放弃');
-        }
+        showConfirm({ title: '放弃本次训练？', desc: '当前进度将被清除，且不会计入训练记录', okText: '放弃训练', danger: true }).then(ok => {
+          if (ok) { closeSession(); store.set('tp_session', null); toast('训练已放弃'); }
+        });
         break;
       case 'tp-timer': {
         unlockAudio(); askNotify();

@@ -171,8 +171,8 @@ let waterMap = store.get('waterMap', {});
 let weightMap = store.get('weightMap', {});
 
 const saveProfile = () => store.set('profile', profile);
-const saveRecords = () => store.set('records', records);
-const saveDiet = () => store.set('dietEntries', dietEntries);
+const saveRecords = () => { store.set('records', records); if (window.RewardsModule) RewardsModule.checkAchievements(); };
+const saveDiet = () => { store.set('dietEntries', dietEntries); if (window.RewardsModule) RewardsModule.checkAchievements(); };
 const saveWater = () => store.set('waterMap', waterMap);
 const saveWeightMap = () => store.set('weightMap', weightMap);
 
@@ -608,16 +608,21 @@ function longestStreak() {
   return best;
 }
 
-/* 数字滚动（count-up；支持 data-group 千分位、data-decimals 小数） */
+/* 数字滚动（count-up；支持 data-group 千分位、data-decimals 小数）
+ * 每次打开 App 只在首次渲染时播放一次，之后重渲染/点击不再跳动 */
+let countUpPlayed = false;
 function runCountUps(scopeEl) {
   const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  $$('[data-count]', scopeEl || document).forEach(el => {
+  const els = $$('[data-count]', scopeEl || document);
+  const playNow = !countUpPlayed && !reduced && els.length > 0;
+  if (playNow) countUpPlayed = true;
+  els.forEach(el => {
     const to = parseFloat(el.dataset.count);
     if (isNaN(to)) { el.textContent = ''; return; }
     const decimals = el.dataset.decimals ? parseInt(el.dataset.decimals, 10) : 0;
     const group = el.dataset.group != null;
     const out = v => decimals ? v.toFixed(decimals) : (group ? grp(v) : String(Math.round(v)));
-    if (reduced) { el.textContent = out(to); return; }
+    if (!playNow) { el.textContent = out(to); return; }
     const dur = 220, t0 = performance.now();
     function step(t) {
       const p = Math.min(1, (t - t0) / dur);
@@ -982,8 +987,8 @@ function openWorkout(planId, saved) {
     completeOne(next);
   });
   $('#wkBack', sub).addEventListener('click', () => { persistSession(); exitWorkout(); toast('进度已保留，刷新可恢复'); });
-  $('#wkQuit', sub).addEventListener('click', () => {
-    if (confirm('确定放弃本次训练？当前进度将被清除')) {
+  $('#wkQuit', sub).addEventListener('click', async () => {
+    if (await showConfirm({ title: '放弃本次训练？', desc: '当前进度将被清除，且不会计入训练记录', okText: '放弃训练', danger: true })) {
       exitWorkout(); clearSession(); toast('训练已放弃');
     }
   });
@@ -1367,8 +1372,8 @@ function renderStats() {
       </div>
       <div class="card rw-share-today" data-rw="share-today">
         <span class="st-ic">🏅</span>
-        <span><b>生成训练海报</b><small>${records.some(r => r.date === today) ? '今日数据已就绪 · 生成分享卡片' : '完成今日训练后即可生成'}</small></span>
-        <span class="go-arrow">海报 ›</span>
+        <span class="st-tx"><b>生成训练海报</b><small>${records.some(r => r.date === today) ? '今日数据已就绪，一键生成分享卡片' : '完成今日训练后即可生成'}</small></span>
+        <span class="go-arrow">›</span>
       </div>
       <div class="card">
         ${RewardsModule.reminderHTML()}
@@ -1556,6 +1561,93 @@ function openGenderSheet(value, onConfirm) {
   $('#sheetCancel2', root).addEventListener('click', closeSheet);
 }
 
+/* ---------- 居中确认弹窗（替代原生 confirm，不显示网址） ---------- */
+function showConfirm(opts) {
+  const o = Object.assign({ title: '确认操作？', desc: '', okText: '确定', cancelText: '取消', danger: false }, opts);
+  return new Promise(resolve => {
+    const mask = document.createElement('div');
+    mask.className = 'modal-mask modal-center';
+    mask.innerHTML = `<div class="modal confirm-modal" role="alertdialog" aria-modal="true">
+      <h3>${esc(o.title)}</h3>
+      ${o.desc ? `<p class="muted">${esc(o.desc)}</p>` : ''}
+      <div class="modal-btns">
+        <button type="button" class="btn ghost" id="cfCancel">${esc(o.cancelText)}</button>
+        <button type="button" class="btn ${o.danger ? 'danger' : ''}" id="cfOk">${esc(o.okText)}</button>
+      </div>
+    </div>`;
+    document.body.appendChild(mask);
+    const done = v => { mask.remove(); resolve(v); };
+    $('#cfCancel', mask).addEventListener('click', () => done(false));
+    $('#cfOk', mask).addEventListener('click', () => done(true));
+    mask.addEventListener('click', e => { if (e.target === mask) done(false); });
+  });
+}
+window.showConfirm = showConfirm;
+
+/* ---------- 头像系统：预设简约头像 + 相册选择 ---------- */
+const AV_BODY = '<path fill="#fff" d="M5.4 19.6c.9-3.6 3.5-5.4 6.6-5.4s5.7 1.8 6.6 5.4a12 12 0 0 1-13.2 0z"/>';
+const AV_HEAD = '<circle cx="12" cy="9.6" r="3.2" fill="#fff"/>';
+const AV_HAIR_SHORT = '<path fill="#fff" d="M8.6 9.2c.2-2.1 1.6-3.4 3.4-3.4s3.2 1.3 3.4 3.4c-.9-1.2-2.1-1.7-3.4-1.7s-2.5.5-3.4 1.7z"/>';
+const AVATAR_PRESETS = [
+  { id: 'm1', bg: '#165dff', inner: AV_HAIR_SHORT + AV_HEAD + AV_BODY },
+  { id: 'm2', bg: '#00b578', inner: '<path fill="#fff" d="M8.6 9.4C8.7 7.2 10.2 5.8 12 5.8s3.3 1.4 3.4 3.6l-1.9-.7c-.8.7-1.9 1-3.5 1z"/>' + AV_HEAD + AV_BODY },
+  { id: 'm3', bg: '#ff7a1a', inner: '<path fill="#fff" d="M8.3 8.6a3.8 3.8 0 0 1 7.4 0z"/><rect x="7.4" y="8.2" width="9.2" height="1.3" rx=".65" fill="#fff"/>' + AV_HEAD + AV_BODY },
+  { id: 'f1', bg: '#ec4899', inner: '<path fill="#fff" d="M8.1 10.2c0-2.9 1.7-4.6 3.9-4.6s3.9 1.7 3.9 4.6c0 1.7-.3 3.2-.9 4.3h-1.3c.5-1.1.7-2.4.7-3.5a2.5 2.5 0 0 0-4.8 0c0 1.1.2 2.4.7 3.5H9c-.6-1.1-.9-2.6-.9-4.3z"/><circle cx="12" cy="9.9" r="2.6" fill="#fff"/>' + AV_BODY },
+  { id: 'f2', bg: '#7c3aed', inner: AV_HAIR_SHORT + '<circle cx="16" cy="7.2" r="1.5" fill="#fff"/>' + AV_HEAD + AV_BODY },
+  { id: 'f3', bg: '#0ea5e9', inner: AV_HAIR_SHORT + '<circle cx="12" cy="5" r="1.4" fill="#fff"/>' + AV_HEAD + AV_BODY }
+];
+const isCustomAvatar = () => typeof profile.avatar === 'string' && profile.avatar.indexOf('data:') === 0;
+function avatarSVG(a, size) {
+  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true"><circle cx="12" cy="12" r="12" fill="${a.bg}"/>${a.inner}</svg>`;
+}
+function avatarHTML(size) {
+  if (isCustomAvatar()) return `<img src="${profile.avatar}" alt="我的头像">`;
+  const p = AVATAR_PRESETS.find(a => a.id === profile.avatar) ||
+    AVATAR_PRESETS.find(a => a.id === (profile.gender === '女' ? 'f1' : 'm1'));
+  return avatarSVG(p, size || 34);
+}
+function openAvatarSheet() {
+  const root = mountSheet(`
+    <div class="sheet-head"><b>选择头像</b></div>
+    <div class="av-grid">
+      ${AVATAR_PRESETS.map(a => `<button type="button" class="av-item ${profile.avatar === a.id ? 'on' : ''}" data-av="${a.id}" aria-label="预设头像">${avatarSVG(a, 44)}</button>`).join('')}
+      <button type="button" class="av-item av-custom ${isCustomAvatar() ? 'on' : ''}" id="avPick" aria-label="从相册选择">
+        ${isCustomAvatar() ? `<img src="${profile.avatar}" alt="当前头像">` : '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="var(--text-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="M4.5 17.5 10 12l3.5 3.5 2.5-2.5 4 4"/></svg>'}
+        <span>相册</span>
+      </button>
+    </div>
+    <input type="file" id="avFile" accept="image/*" hidden>
+    <div class="sheet-btns"><button type="button" class="btn full" id="avClose">完成</button></div>`);
+  root.querySelectorAll('[data-av]').forEach(b => b.addEventListener('click', () => {
+    profile.avatar = b.dataset.av; saveProfile();
+    root.querySelectorAll('.av-item').forEach(x => x.classList.remove('on'));
+    b.classList.add('on');
+    toast('头像已更新');
+  }));
+  $('#avPick', root).addEventListener('click', () => $('#avFile', root).click());
+  $('#avFile', root).addEventListener('change', e => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const rd = new FileReader();
+    rd.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const S = 128, cv = document.createElement('canvas');
+        cv.width = S; cv.height = S;
+        const ctx = cv.getContext('2d');
+        const s = Math.min(img.width, img.height);
+        ctx.drawImage(img, (img.width - s) / 2, (img.height - s) / 2, s, s, 0, 0, S, S);
+        profile.avatar = cv.toDataURL('image/jpeg', .82);
+        saveProfile(); closeSheet(); renderMine(); toast('头像已更新');
+      };
+      img.onerror = () => toast('图片读取失败，换一张试试');
+      img.src = rd.result;
+    };
+    rd.readAsDataURL(f);
+  });
+  $('#avClose', root).addEventListener('click', () => { closeSheet(); renderMine(); });
+}
+
 const FIELD_CONF = {
   age:          { title: '年龄',     unit: '岁',  min: 10, max: 100, step: 1,   dec: 0 },
   height:       { title: '身高',     unit: 'cm',  min: 130, max: 210, step: 1,   dec: 0 },
@@ -1567,12 +1659,6 @@ function editField(label, key) {
   openWheelSheet(cfg, v => {
     profile[key] = v; saveProfile(); renderMine(); toast(`${cfg.title}已更新为 ${v} ${cfg.unit}`);
   });
-}
-function genderMeta() {
-  const male = profile.gender !== '女';
-  return male
-    ? { color: '#165dff', bg: 'rgba(22,93,255,.10)', paths: '<circle cx="9.5" cy="14" r="4.5"/><path d="M12.7 10.8 19 5"/><path d="M14 5h5v5"/>' }
-    : { color: '#ec4899', bg: 'rgba(236,72,153,.10)', paths: '<circle cx="12" cy="8.5" r="4.5"/><path d="M12 13v6.5"/><path d="M8.5 16.5h7"/>' };
 }
 const GO_ARROW_SVG = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="var(--primary)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9.2 4.6 16.6 12l-7.4 7.4"/></svg>';
 /* 训练偏好简约线性图标（单色描边，跟随次级文字色） */
@@ -1588,25 +1674,21 @@ const PREF_ICONS = {
 function renderMine() {
   appNoAnim();
   const bmi = bmiInfo();
-  const totalK = records.reduce((s, r) => s + r.kcal, 0);
-  const badges = [
-    { icon: '🎯', name: '首次训练', on: records.length >= 1 },
-    { icon: '📅', name: '坚持7天', on: streakDays() >= 7 },
-    { icon: '🏋️', name: '累计10次', on: records.length >= 10 },
-    { icon: '🔥', name: '燃烧1000', on: totalK >= 1000 },
-    { icon: '🥗', name: '记录饮食', on: dietEntries.length >= 1 },
-    { icon: '⭐', name: '健身达人', on: records.length >= 30 }
-  ];
   $('#app').innerHTML = `
     <div class="profile-hero">
-      <span class="pf-avatar" style="background:${genderMeta().bg};color:${genderMeta().color}">
-        <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${genderMeta().paths}</svg>
-      </span>
+      <span class="pf-avatar" id="pfAvatar" role="button" aria-label="修改头像">${avatarHTML(34)}</span>
       <div>
         <div class="pn">${esc(profile.nickname)}</div>
         <div class="pg">${goalTag(profile.goal)} <span style="margin-left:8px">${esc(profile.gender)} · ${profile.age} 岁</span></div>
       </div>
-      <button class="edit-btn" id="editNick">编辑</button>
+    </div>
+    <div class="card pf-edit-card">
+      <div class="bmi-row" id="editNick">
+        <span class="bl">修改名字</span><span class="bv">${esc(profile.nickname)}</span><span class="go-btn">${GO_ARROW_SVG}</span>
+      </div>
+      <div class="bmi-row" id="editAvatar">
+        <span class="bl">修改头像</span><span class="bv muted">预设 / 相册</span><span class="go-btn">${GO_ARROW_SVG}</span>
+      </div>
     </div>
     <div class="mine-col mine-col-l">
     <div class="card">
@@ -1658,11 +1740,11 @@ function renderMine() {
       <h3>设置</h3>
       <div class="set-sub">账号与云同步</div>
       ${auth.token ? `
-        <p class="set-account">👤 <b>${esc(auth.username)}</b> <span class="muted">· 已登录</span></p>
-        <div class="set-chips">
-          <span class="chip" id="cloudUploadBtn">☁️ 上传到云端</span>
-          <span class="chip" id="cloudDownloadBtn">⬇️ 从云端恢复</span>
-          <span class="chip" id="btnOut">退出登录</span>
+        <p class="set-account">${pIcon('<circle cx="12" cy="8" r="3.4"/><path d="M5.5 19.5c1-3.6 3.6-5.4 6.5-5.4s5.5 1.8 6.5 5.4"/>')} <b>${esc(auth.username)}</b> <span class="muted">· 已登录</span></p>
+        <div class="set-chips sync-chips">
+          <span class="chip" id="cloudUploadBtn">${pIcon('<path d="M7 16.5a4.3 4.3 0 1 1 .58-8.55A5.8 5.8 0 0 1 18.9 9.9 3.4 3.4 0 0 1 17.5 16.5h-2"/><path d="M12 11.5v7m0-7-2.5 2.5M12 11.5l2.5 2.5"/>')}上传云端</span>
+          <span class="chip" id="cloudDownloadBtn">${pIcon('<path d="M7 16.5a4.3 4.3 0 1 1 .58-8.55A5.8 5.8 0 0 1 18.9 9.9 3.4 3.4 0 0 1 17.5 16.5h-2"/><path d="M12 11v7m0 0-2.5-2.5M12 18l2.5-2.5"/>')}云端恢复</span>
+          <span class="chip" id="btnOut">${pIcon('<path d="M14.5 4.5h-9v15h9"/><path d="M10.5 12h9m0 0-3-3m3 3-3 3"/>')}退出登录</span>
         </div>
       ` : `
         <input id="authUser" class="field-input" placeholder="用户名（3-20位字母数字）"
@@ -1706,13 +1788,15 @@ function renderMine() {
       <div class="set-sub">关于</div>
       <p class="muted set-line">肌肉会飞 v3.0.0 · 科学训练与饮食记录</p>
     </div>
-    <div class="card"><h3>我的成就</h3>
-      <div class="badges">${badges.map(b => `<div class="badge ${b.on ? 'on' : ''}"><i>${b.icon}</i><span>${b.name}</span></div>`).join('')}</div>
-    </div>
+    ${window.RewardsModule ? RewardsModule.achEntryHTML() : ''}
     </div>
   `;
-  $('#editNick').addEventListener('click', () => openTextSheet('修改昵称', profile.nickname, 12, v => {
-    profile.nickname = v; saveProfile(); renderMine(); toast('昵称已更新');
+  $('#pfAvatar').addEventListener('click', openAvatarSheet);
+  $('#editAvatar').addEventListener('click', openAvatarSheet);
+  const achEntryEl = $('#achEntry');
+  if (achEntryEl) achEntryEl.addEventListener('click', () => RewardsModule.openAchievements());
+  $('#editNick').addEventListener('click', () => openTextSheet('修改名字', profile.nickname, 12, v => {
+    profile.nickname = v; saveProfile(); renderMine(); toast('名字已更新');
   }));
   $('#rowGender').addEventListener('click', () => openGenderSheet(profile.gender, g => {
     profile.gender = g; saveProfile(); renderMine(); toast('性别已选择：' + g);
@@ -1951,6 +2035,8 @@ async function initApp() {
   // 立即用本地数据渲染首页，任何网络状况都不阻塞界面
   showTab('home');
   resumeSessionIfAny();
+  // 启动时静默补检成就（云端恢复等场景错过的解锁会补发庆祝）
+  setTimeout(() => { if (window.RewardsModule) RewardsModule.checkAchievements(); }, 1200);
   // 空闲预加载食物库，首次切到饮食记录不再等待
   setTimeout(() => { if (window.DietModule) DietModule.prefetch(); }, 2500);
   if (auth.token) {

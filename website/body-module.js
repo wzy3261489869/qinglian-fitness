@@ -8,11 +8,11 @@
   'use strict';
 
   const METRICS = [
-    { key: 'bf',    label: '体脂率', unit: '%',  icon: '🔥', step: 0.1, color: '#ff6b35' },
-    { key: 'waist', label: '腰围',   unit: 'cm', icon: '📏', step: 0.5, color: '#165dff' },
-    { key: 'hip',   label: '臀围',   unit: 'cm', icon: '🫶', step: 0.5, color: '#7c3aed' },
-    { key: 'arm',   label: '臂围',   unit: 'cm', icon: '💪', step: 0.5, color: '#0ea5e9' },
-    { key: 'thigh', label: '大腿围', unit: 'cm', icon: '🦵', step: 0.5, color: '#10b981' }
+    { key: 'bf',    label: '体脂率', unit: '%',  step: 0.1, color: '#ff6b35' },
+    { key: 'waist', label: '腰围',   unit: 'cm', step: 0.5, color: '#165dff' },
+    { key: 'hip',   label: '臀围',   unit: 'cm', step: 0.5, color: '#7c3aed' },
+    { key: 'arm',   label: '臂围',   unit: 'cm', step: 0.5, color: '#0ea5e9' },
+    { key: 'thigh', label: '大腿围', unit: 'cm', step: 0.5, color: '#10b981' }
   ];
   const MKEYS = METRICS.map(m => m.key);
   const MByKey = {};
@@ -56,7 +56,7 @@
     return `<div class="bd-latest">${METRICS.map(m => {
       const o = lv[m.key];
       if (!o.cur) {
-        return `<div class="bd-lcell"><span class="bd-li">${m.icon}</span><span class="bd-ll">${m.label}</span><span class="bd-lv muted">—</span></div>`;
+        return `<div class="bd-lcell"><span class="bd-ll">${m.label}</span><span class="bd-lv muted">—</span></div>`;
       }
       let delta = '';
       if (o.prev) {
@@ -69,7 +69,6 @@
         }
       }
       return `<div class="bd-lcell">
-        <span class="bd-li">${m.icon}</span>
         <span class="bd-ll">${m.label}</span>
         <span class="bd-lv">${o.cur.v}<em>${m.unit}</em></span>
         ${delta}
@@ -93,7 +92,7 @@
     });
     const chartId = 'bdChartBox';
     if (!pts.length) {
-      return `<div class="empty" style="padding:20px"><i>${m.icon}</i>近 ${curRange} 天还没有「${m.label}」记录<br>先在上方保存一条吧</div>`;
+      return `<div class="empty" style="padding:20px">近 ${curRange} 天还没有「${m.label}」记录<br>先在上方保存一条吧</div>`;
     }
     const W = 340, H = 224, L = 40, R = 16, T = 16, B = 28;
     const pw = W - L - R, ph = H - T - B;
@@ -162,7 +161,7 @@
             <div class="bd-fields">
               ${METRICS.map(m => `
                 <label class="bd-field">
-                  <span>${m.icon} ${m.label}<em>${m.unit}</em></span>
+                  <span>${m.label}<em>${m.unit}</em></span>
                   <input type="number" inputmode="decimal" step="${m.step}" id="bdf-${m.key}" placeholder="未测">
                 </label>`).join('')}
             </div>
@@ -176,7 +175,7 @@
           <div class="card">
             <h3>变化趋势</h3>
             <div class="goal-opts" style="margin-bottom:12px">
-              ${METRICS.map(m => `<span class="chip ${curMetric === m.key ? 'active' : ''}" data-bm="metric" data-k="${m.key}">${m.icon} ${m.label}</span>`).join('')}
+              ${METRICS.map(m => `<span class="chip ${curMetric === m.key ? 'active' : ''}" data-bm="metric" data-k="${m.key}">${m.label}</span>`).join('')}
             </div>
             <div class="seg" style="margin-bottom:8px">
               <span class="seg-i ${curRange === 30 ? 'on' : ''}" data-bm="range" data-r="30">近30天</span>
@@ -234,6 +233,7 @@
       map[date] = entry; setMap(map);
       toast(`已保存 ${date} 的 ${filled} 项数据 ✅`);
       silentUpload();
+      if (window.RewardsModule) RewardsModule.checkAchievements();
       refreshChart();
     });
     $('#bdClear').addEventListener('click', () => {
