@@ -263,7 +263,10 @@
   const TT_ICONS = {
     plan: ttIcon('<rect x="6" y="4.5" width="12" height="16" rx="2.5"/><path d="M9.5 2.8h5v3.4h-5z"/><path d="M9.3 11h5.4M9.3 15h3.4"/>'),
     rest: ttIcon('<path d="M17.2 13.6A6.5 6.5 0 0 1 9.9 5.4a6.5 6.5 0 1 0 7.3 8.2Z"/>'),
-    done: ttIcon('<circle cx="12" cy="12" r="8.4"/><path d="m8.4 12.3 2.5 2.5 4.7-5.2"/>')
+    done: ttIcon('<circle cx="12" cy="12" r="8.4"/><path d="m8.4 12.3 2.5 2.5 4.7-5.2"/>'),
+    play: ttIcon('<path d="M8 5.4v13.2L18.4 12Z"/>'),
+    pause: ttIcon('<path d="M8 5.4v13.2M16 5.4v13.2"/>'),
+    timer: ttIcon('<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>')
   };
   function todayCard() {
     const id = getActiveId();
@@ -429,6 +432,12 @@
     for (let i = 0; i < sess.items.length; i++) if (!sess.done.includes(i)) return i;
     return null;
   };
+  /* 计时类动作：从次数描述解析秒数（'30秒'→30，'1分钟'→60，'1.5分钟'→90）；非计时类返回 0 */
+  const parseSecs = reps => {
+    const m = /(\d+(?:\.\d+)?)\s*分钟/.exec(reps); if (m) return Math.round(m[1] * 60);
+    const s = /(\d+(?:\.\d+)?)\s*秒/.exec(reps); if (s) return Math.round(s[1]);
+    return 0;
+  };
 
   function openSession(planId, dayIdxArg, saved) {
     const plan = findPlan(planId);
@@ -439,7 +448,8 @@
     sess = saved || {
       planId, day: dayI, date: todayStr(), done: [],
       running: false, runStart: 0, elapsed: 0,
-      restEnd: 0, restLen: 0, beeped: {}
+      restEnd: 0, restLen: 0, beeped: {},
+      actTimerEnd: 0, actTimerBeeped: true
     };
     sess.items = day.e;
     const sub = document.createElement('div');
@@ -449,7 +459,9 @@
       <div class="sp-head">
         <button class="icon-btn" data-tp="tp-sess-back" aria-label="返回（保留进度）">‹</button>
         <b>${esc(plan.title)}</b>
-        <button class="icon-btn tp-quit" data-tp="tp-quit" aria-label="放弃训练">放弃</button>
+        <button class="tp-quit" data-tp="tp-quit" aria-label="放弃训练">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>放弃
+        </button>
       </div>
       <div class="sp-body tp-sess-body">
         <div class="tps-day">
@@ -459,7 +471,7 @@
         <div class="card tps-timer-card">
           <div class="tc-label">训练计时</div>
           <div class="tps-time" id="tpsTime">00:00</div>
-          <button class="btn ghost" id="tpsToggle" data-tp="tp-timer">▶ 开始计时</button>
+          <button class="btn ghost tps-toggle" id="tpsToggle" data-tp="tp-timer">${TT_ICONS.play}<span>开始计时</span></button>
         </div>
         <div class="tps-rest" id="tpsRest" hidden>
           <div class="tr-label">😮‍💨 组间休息</div>
@@ -480,10 +492,12 @@
             ${day.e.map((it, i) => {
               const [n, sets, reps, rest] = it;
               const thumb = typeof thumbFor === 'function' ? thumbFor(n) : '';
+              const tsecs = parseSecs(reps);
               return `<button type="button" class="tps-row ${sess.done.includes(i) ? 'done' : ''}" data-tp="tp-row" data-i="${i}">
                 ${thumb ? `<span class="ex-thumb"><img loading="lazy" src="${thumb}" alt=""></span>` : '<span class="tps-noimg"></span>'}
                 <span class="tps-n">${esc(n)}</span>
                 <span class="tps-v">${sets} × ${esc(reps)}<em>·休${rest || 0}″</em></span>
+                ${tsecs ? `<span class="tps-timer" data-tp="tp-act-timer" data-i="${i}" data-secs="${tsecs}" role="button" aria-label="${esc(n)} 计时 ${tsecs} 秒" title="点我开始 ${tsecs} 秒计时，时间到震动提醒">${TT_ICONS.timer}</span>` : ''}
                 <span class="tps-demo" data-demo="${esc(n)}" role="button" aria-label="观看 ${n} 演示视频" title="看演示视频">▶</span>
                 <span class="tps-state" aria-hidden="true">
                   <svg viewBox="0 0 24 24" width="15" height="15"><path d="M5 12.5l4.2 4.2L19 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -514,6 +528,7 @@
     sessIv = setInterval(renderTick, 250);
     renderTick(); updateSess(); persistSess();
     if (saved && (saved.elapsed > 0 || saved.done.length)) toast('已恢复上次训练 💪');
+    if (sess.running) $('#tpsToggle').innerHTML = TT_ICONS.pause + '<span>暂停</span>';
   }
 
   function renderTick() {
@@ -534,6 +549,23 @@
         beep(1175, .55, 'sine', .4); haptic([300, 100, 300]);
       }
     } else restEl.hidden = true;
+    // 动作计时器：行内倒计时显示，时间到震动+声音提醒
+    if (sess.actTimerEnd) {
+      const left = Math.ceil((sess.actTimerEnd - Date.now()) / 1000);
+      const tEl = sessEl.querySelector(`.tps-timer[data-i="${sess.actTimerI}"]`);
+      if (left > 0) {
+        if (tEl && tEl.textContent !== left + '″') tEl.textContent = left + '″';
+        if (left <= 3 && !sess.actTimerBeeped) {
+          sess.actTimerBeeped = true;
+          beep(880, .12); haptic(150);
+        }
+      } else {
+        if (tEl) { tEl.innerHTML = TT_ICONS.timer; tEl.classList.remove('run'); }
+        sess.actTimerEnd = 0; sess.actTimerBeeped = true;
+        beep(1175, .55, 'sine', .4); haptic([300, 100, 300]);
+        toast('⏱ 时间到！' + sess.items[sess.actTimerI][0] + ' 可以停了');
+      }
+    }
     persistSess();
   }
 
@@ -685,10 +717,10 @@
         const b = $('#tpsToggle');
         if (sess.running) {
           sess.elapsed += Date.now() - sess.runStart;
-          sess.running = false; b.textContent = '▶ 继续计时'; releaseWake();
+          sess.running = false; b.innerHTML = TT_ICONS.play + '<span>继续计时</span>'; releaseWake();
         } else {
           sess.running = true; sess.runStart = Date.now();
-          b.textContent = '⏸ 暂停'; acquireWake();
+          b.innerHTML = TT_ICONS.pause + '<span>暂停</span>'; acquireWake();
         }
         persistSess(); renderTick();
         break;
@@ -704,6 +736,26 @@
         updateSess(); persistSess();
         break;
       }
+      case 'tp-act-timer': {
+        e.stopPropagation(); // 防止触发行点击（完成/取消完成）
+        unlockAudio(); askNotify();
+        const i = +btn.dataset.i;
+        const secs = +btn.dataset.secs;
+        if (sess.actTimerEnd && sess.actTimerI === i) {
+          // 再点一次取消
+          sess.actTimerEnd = 0; sess.actTimerBeeped = true;
+          btn.innerHTML = TT_ICONS.timer; btn.classList.remove('run');
+          toast('已取消计时');
+        } else {
+          sess.actTimerI = i;
+          sess.actTimerEnd = Date.now() + secs * 1000;
+          sess.actTimerBeeped = false;
+          btn.textContent = secs + '″'; btn.classList.add('run');
+          toast('⏱ ' + sess.items[i][0] + ' 计时 ' + secs + ' 秒');
+        }
+        persistSess();
+        break;
+      }
       case 'tp-skiprest':
         sess.restEnd = 0; persistSess(); renderTick();
         break;
@@ -713,7 +765,7 @@
         unlockAudio(); askNotify();
         if (!sess.running) {
           sess.running = true; sess.runStart = Date.now();
-          $('#tpsToggle').textContent = '⏸ 暂停'; acquireWake();
+          $('#tpsToggle').innerHTML = TT_ICONS.pause + '<span>暂停</span>'; acquireWake();
         }
         completeOne(next);
         break;

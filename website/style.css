@@ -959,7 +959,9 @@ body {
   position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
   font-size: 34px; font-weight: 800; color: var(--warning); font-variant-numeric: tabular-nums;
 }
-.tps-list { margin-top: 12px; display: flex; flex-direction: column; }
+.tps-list { margin-top: 8px; display: flex; flex-direction: column; }
+/* 训练页：清单卡片与底部悬浮按钮之间留足缓冲，避免绿色按钮与最后一行视觉上重合 */
+.tps-list-card { margin-bottom: 24px; }
 .tps-row {
   display: flex; align-items: center; gap: 12px; width: 100%;
   padding: 8px 4px; text-align: left; border-bottom: 1px solid var(--divider);
@@ -978,6 +980,34 @@ body {
   font-variant-numeric: tabular-nums;
 }
 .tps-v em { font-style: normal; font-weight: 400; color: var(--text-3); margin-left: 4px; }
+/* 动作计时按钮：28px 圆底细边，计时中变橙色倒计时数字 */
+.tps-timer {
+  flex-shrink: 0; width: 28px; height: 28px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border); color: var(--text-3);
+  font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;
+  cursor: pointer; transition: .15s;
+}
+.tps-timer svg { width: 15px; height: 15px; }
+.tps-timer:active { transform: scale(.88); }
+/* 计时器开始/暂停按钮：图标+文字水平排列 */
+.tps-toggle { display: inline-flex; align-items: center; gap: 6px; }
+.tps-toggle svg { width: 16px; height: 16px; flex-shrink: 0; }
+.tps-timer.run {
+  border-color: var(--warning); color: var(--warning);
+  background: rgba(255, 125, 0, .08); animation: tpsTimerPulse 1s ease-in-out infinite;
+}
+@keyframes tpsTimerPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(255,125,0,.3); } 50% { box-shadow: 0 0 0 4px rgba(255,125,0,0); } }
+/* 放弃按钮：红色描边小按钮，与整体画风一致 */
+.tp-quit {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 13px; color: var(--danger); cursor: pointer;
+  border: 1px solid rgba(245, 63, 63, .3); border-radius: 8px;
+  padding: 5px 10px; background: rgba(245, 63, 63, .06);
+  white-space: nowrap; transition: .15s;
+}
+.tp-quit svg { width: 12px; height: 12px; }
+.tp-quit:active { transform: scale(.94); background: rgba(245, 63, 63, .12); }
 .tps-state {
   width: 24px; height: 24px; border-radius: 999px; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
@@ -991,6 +1021,24 @@ body {
 :root[data-theme="dark"] .tps-row.done .tps-state { border-color: rgba(54, 201, 154, .5); }
 .tps-row.done .ex-thumb, .tps-row.done .tps-noimg { opacity: .6; }
 .tp-sess-page .sp-body { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
+/* 训练页底部按钮区：sticky 跟随内容，实底不透明，避免覆盖动作清单 */
+.tps-foot {
+  position: sticky !important; left: auto !important; right: auto !important;
+  bottom: 0; background: var(--bg-card) !important;
+  border-top: 1px solid var(--divider);
+}
+:root[data-theme="dark"] .tps-foot { background: var(--bg-page) !important; }
+/* sticky 后 sp-body 底部 padding 只需 safe-area */
+.tp-sess-page .sp-body { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+/* 休息面板平滑展开/收起，避免布局瞬间跳动 */
+.tps-rest {
+  overflow: hidden; max-height: 320px; opacity: 1;
+  transition: max-height .28s var(--ease), opacity .24s, margin-top .28s, padding .28s;
+}
+.tps-rest[hidden] {
+  display: block !important; max-height: 0; opacity: 0;
+  margin-top: 0; padding-top: 0; padding-bottom: 0;
+}
 
 /* ---- 完成庆祝动画 ---- */
 .tp-celebrate {
