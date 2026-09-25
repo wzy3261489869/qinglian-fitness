@@ -641,8 +641,9 @@ body, .card, #tabbar, .subpage .sp-head { transition: background-color .25s, bor
 /* ============================================
    全局移动端体验：动态视口高度 · 触摸优化
    ============================================ */
-@supports (height: 100dvh) {
-  #app { min-height: 100dvh; }
+/* 用 svh（小视口高度）而非 dvh：地址栏伸缩时高度恒定，避免滚动中底部内容重排“往下缩” */
+@supports (height: 100svh) {
+  #app { min-height: 100svh; }
 }
 body {
   /* 防止橡皮筋滚动穿透到子页 */
@@ -1054,7 +1055,9 @@ body {
 .dm-cfg {
   font-size: 13px; color: var(--primary-dark); cursor: pointer;
   background: rgba(0,181,120,.1); border-radius: 8px; padding: 4px 12px; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 5px;
 }
+.dm-cfg svg { width: 14px; height: 14px; flex-shrink: 0; }
 
 /* 每餐宏量营养素堆叠条 */
 .macro-stack {

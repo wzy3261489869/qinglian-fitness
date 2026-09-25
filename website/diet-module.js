@@ -115,7 +115,7 @@
         </div>
       </div>
       <div class="card dm-budget-row">
-        <span class="dm-cfg" data-dm="open-target">⚙️ 目标设置</span>
+        <span class="dm-cfg" data-dm="open-target">目标设置 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="7.6"/><circle cx="12" cy="12" r="3.2"/></svg></span>
         <span style="flex:1;text-align:right;font-size:13px;color:var(--text-2)">${remaining >= 0 ? '还可摄入' : '已超量'}</span>
         <b style="color:${remaining >= 0 ? 'var(--primary-dark)' : 'var(--danger)'};margin-left:8px">${Math.abs(remaining)} 千卡</b>
       </div>
