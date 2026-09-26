@@ -80,10 +80,21 @@
     });
   }
   function tileUrl() {
-    // 类苹果地图观感：低饱和度、细路网、淡色块
-    return isDark()
-      ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-      : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png';
+    // Esri 浅灰画布：无需 API Key、低饱和细路网，观感接近苹果地图
+    // 深色模式不换瓦片源，由 CSS invert 滤镜生成深色底图（见 .darkmap）
+    return 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}';
+  }
+  function applyMapTheme() {
+    const host = pageEl ? $('#runMapHost', pageEl) : null;
+    if (host) host.classList.toggle('darkmap', isDark());
+  }
+  let following = true; // 地图是否跟随当前位置；false 时显示全览/自由浏览
+
+  function fitAllTrack() {
+    if (!map || !sess.points.length) return;
+    if (sess.points.length < 2) { map.setView([sess.points[0].lat, sess.points[0].lng], 16); return; }
+    map.fitBounds(L.latLngBounds(sess.points.map(p => [p.lat, p.lng])),
+      { padding: [52, 52], maxZoom: 16 });
   }
   function initMap() {
     const host = $('#runMapHost', pageEl);
@@ -91,45 +102,57 @@
     const first = sess.points[0];
     map = L.map(host, { zoomControl: false, attributionControl: false });
     L.control.zoom({ position: 'bottomright' }).addTo(map);
-    tileLayer = L.tileLayer(tileUrl(), { maxZoom: 20, subdomains: 'abcd' }).addTo(map);
+    tileLayer = L.tileLayer(tileUrl(), { maxZoom: 17 }).addTo(map);
     map.setView([first.lat, first.lng], 16);
     const ll = sess.points.map(p => [p.lat, p.lng]);
-    // 轨迹：浅色描边（深色模式用黑色）+ 品牌绿主线，苹果风运动轨迹样式
+    // 轨迹：白色描边 + 品牌绿主线，苹果风运动轨迹样式
     haloPoly = L.polyline(ll, {
-      color: isDark() ? '#000' : '#fff', weight: 10,
-      opacity: isDark() ? .55 : .9, lineJoin: 'round', lineCap: 'round'
+      color: '#fff', weight: 10, opacity: .9,
+      lineJoin: 'round', lineCap: 'round'
     }).addTo(map);
     poly = L.polyline(ll, {
       color: BRAND, weight: 5.5, lineJoin: 'round', lineCap: 'round'
     }).addTo(map);
-    startMarker = L.circleMarker([first.lat, first.lng], {
+    startMarker = L.circleMarker(ll[0], {
       radius: 7, color: '#fff', weight: 2.5, fillColor: BRAND, fillOpacity: 1
     }).addTo(map);
-    curMarker = L.circleMarker([first.lat, first.lng], {
+    curMarker = L.circleMarker(ll.at(-1), {
       radius: 6, color: '#fff', weight: 2.5, fillColor: BRAND, fillOpacity: 1
     }).addTo(map);
+    // 用户手动拖动地图 → 退出跟随
+    map.on('dragstart', () => {
+      if (following) { following = false; syncCtlBtn(); }
+    });
     leafletOk = true;
+    applyMapTheme();
+    // 子页滑入动画结束后再校正容器尺寸（避免瓦片只铺一半），然后按当前模式取景
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (!map) return;
+      map.invalidateSize();
+      if (following) {
+        if (sess.points.length > 1) map.panTo(ll.at(-1));
+      } else fitAllTrack();
+    }));
   }
   function updateMap() {
     if (!poly || !sess.points.length) return;
     const ll = sess.points.map(p => [p.lat, p.lng]);
-    haloPoly.setStyle({ color: isDark() ? '#000' : '#fff', opacity: isDark() ? .55 : .9 });
     haloPoly.setLatLngs(ll);
     poly.setLatLngs(ll);
     curMarker.setLatLng(ll.at(-1));
-    map.panTo(ll.at(-1), { animate: true });
+    if (following) map.panTo(ll.at(-1), { animate: true });
   }
-  // 主题切换后同步底图（tick 中轻量检查）
-  function refreshTiles() {
-    if (!map || !tileLayer) return;
-    const dark = isDark();
-    const url = tileLayer._url || '';
-    const matched = dark ? url.indexOf('dark_all') > -1 : url.indexOf('light_all') > -1;
-    if (matched) return;
-    map.removeLayer(tileLayer);
-    tileLayer = L.tileLayer(tileUrl(), { maxZoom: 20, subdomains: 'abcd' }).addTo(map);
-    tileLayer.bringToBack();
+  /* 悬浮按钮两态：跟随中显示「全览」→ fitBounds 全轨迹；浏览中显示「定位」→ 回到跟随 */
+  function syncCtlBtn() {
+    const btn = $('#runFitBtn', pageEl);
+    if (!btn) return;
+    btn.classList.toggle('locate', !following);
+    btn.title = following ? '查看完整轨迹' : '回到当前位置';
+    btn.setAttribute('aria-label', btn.title);
+    btn.querySelector('.ctl-tx').textContent = following ? '全览' : '定位';
   }
+  // 主题切换后同步深色滤镜（tick 中轻量调用）
+  function refreshTiles() { applyMapTheme(); }
   // SVG 兜底：无 Leaflet 时自绘轨迹（同样双层描边）
   function renderSvgTrack() {
     const host = $('#runMapHost', pageEl);
@@ -250,6 +273,11 @@
         <p class="run-gps-msg" id="runGpsMsg" hidden></p>
         <div class="run-map-card">
           <div id="runMapHost" class="run-map"><div class="rm-await">点「${m.startText}」后记录 GPS 轨迹</div></div>
+          <button type="button" class="run-map-ctl" id="runFitBtn" title="查看完整轨迹" aria-label="查看完整轨迹">
+            <svg class="ctl-ic ic-fit" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9V5.5A1.5 1.5 0 0 1 5.5 4H9"/><path d="M20 9V5.5A1.5 1.5 0 0 0 18.5 4H15"/><path d="M4 15v3.5A1.5 1.5 0 0 0 5.5 20H9"/><path d="M20 15v3.5a1.5 1.5 0 0 1-1.5 1.5H15"/></svg>
+            <svg class="ctl-ic ic-locate" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.1"/><path d="M12 2.8v3M12 18.2v3M2.8 12h3M18.2 12h3"/></svg>
+            <span class="ctl-tx">全览</span>
+          </button>
         </div>
       </div>
       <div class="run-foot">
@@ -264,10 +292,22 @@
       persist(); teardown();
       toast('运动进度已保留，重新进入可恢复');
     });
+    $('#runFitBtn', pageEl).addEventListener('click', () => {
+      if (following) {
+        following = false; fitAllTrack();
+      } else {
+        following = true;
+        if (sess.points.length) map.panTo([sess.points.at(-1).lat, sess.points.at(-1).lng]);
+      }
+      syncCtlBtn();
+    });
 
+    // 恢复旧记录：默认全览完整轨迹；新开始：跟随当前位置
+    following = !resumed;
     clearInterval(tickIv);
     tickIv = setInterval(tick, 500);
     renderStatsDom();
+    syncCtlBtn();
     if (sess.points.length) ensureMap();
     if (resumed && (resumed.elapsed || resumed.points.length)) toast('已恢复上次' + (sess.mode === 'ride' ? '骑行' : '跑步'));
   }

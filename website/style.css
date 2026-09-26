@@ -2213,5 +2213,27 @@ body.sheet-open { overflow: hidden; }
 
 /* 深色底图时地图容器背景 */
 :root[data-theme="dark"] .run-map { background: #1a1d1c; }
+/* 深色模式：同一份浅灰瓦片反相为深色底图（轨迹覆盖层不受影响） */
+.run-map.darkmap .leaflet-tile-pane {
+  filter: invert(1) brightness(.95);
+}
+
+/* 地图悬浮「全览 / 定位」按钮 */
+.run-map-card { position: relative; }
+.run-map-ctl {
+  position: absolute; z-index: 5; top: 10px; right: 10px;
+  display: flex; align-items: center; gap: 5px;
+  height: 34px; padding: 0 11px; cursor: pointer;
+  background: rgba(255, 255, 255, .94); color: var(--text-1);
+  border: none; border-radius: var(--r-pill);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .14);
+  font-size: 13px; font-weight: 600;
+  transition: transform .12s var(--ease);
+}
+.run-map-ctl:active { transform: scale(.94); }
+.run-map-ctl .ic-locate { display: none; }
+.run-map-ctl.locate .ic-fit { display: none; }
+.run-map-ctl.locate .ic-locate { display: block; color: var(--primary); }
+:root[data-theme="dark"] .run-map-ctl { background: rgba(44, 44, 46, .95); color: var(--text-1); }
 
 
