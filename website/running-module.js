@@ -1,10 +1,10 @@
 /* =====================================================================
- * 户外运动模块（跑步 / 骑行）
+ * 户外运动模块（跑步 / 健走 / 骑行 / 徒步 / 越野跑 / 登山 / 轮滑 / 滑雪）
  * 架构：经典脚本 + window.RunModule 命名空间 + document 级事件委托
  * 能力：GPS 轨迹（Leaflet + 类苹果风浅色底图，加载失败 SVG 兜底）、
  *   时间戳计时、里程（haversine + 精度/抖动/漂移过滤）、
  *   跑步配速、骑行均速、卡路里、断点恢复
- * 数据：完成后写入全局 records（type:'run' | 'ride'），自动并入统计与热力图
+ * 数据：完成后写入全局 records（type:'run'|'walk'|'ride'|'hike'|'trail'|'mountain'|'skate'|'ski'），自动并入统计与热力图
  * 依赖（app.js）：store/$/$$/esc/toast/pad/todayStr/genId/saveRecords/
  *   records/showConfirm/showTab
  * ===================================================================== */
@@ -12,11 +12,16 @@
 (function () {
   const BRAND = '#00b578';      // 轨迹主色：软件品牌绿
   const FINISH = '#ff7a1a';     // 终点色
+  /* pace: true=显示配速(/km)，false=显示均速(km/h) */
   const MODES = {
-    run:  { title: '户外跑步', startText: '开始跑步', kcalK: 1.036, vMax: 12, pace: true },
-    walk: { title: '户外健走', startText: '开始健走', kcalK: 0.45,  vMax: 5,  pace: true },
-    ride: { title: '户外骑行', startText: '开始骑行', kcalK: 0.40,  vMax: 25, pace: false },
-    hike: { title: '户外徒步', startText: '开始徒步', kcalK: 0.60,  vMax: 7,  pace: true }
+    run:      { title: '户外跑步',   startText: '开始跑步', kcalK: 1.036, vMax: 12, pace: true },
+    walk:     { title: '户外健走',   startText: '开始健走', kcalK: 0.45,  vMax: 5,  pace: true },
+    ride:     { title: '户外骑行',   startText: '开始骑行', kcalK: 0.40,  vMax: 25, pace: false },
+    hike:     { title: '户外徒步',   startText: '开始徒步', kcalK: 0.60,  vMax: 7,  pace: true },
+    trail:    { title: '户外越野跑', startText: '开始越野', kcalK: 1.1,   vMax: 10, pace: true },
+    mountain: { title: '户外登山',   startText: '开始登山', kcalK: 0.65,  vMax: 6,  pace: true },
+    skate:    { title: '户外轮滑',   startText: '开始轮滑', kcalK: 0.55,  vMax: 30, pace: false },
+    ski:      { title: '户外滑雪',   startText: '开始滑雪', kcalK: 0.5,   vMax: 40, pace: false }
   };
 
   let sess = null;          // { mode, elapsed, runStart, running, points, distance }
@@ -232,7 +237,7 @@
     const set = (id, v) => { const el = $(id, pageEl); if (el) el.textContent = v; };
     set('#runTime', fmtDur(elapsedMs()));
     set('#runKm', st.km.toFixed(2));
-    if (sess.mode === 'ride') {
+    if (!MODES[sess.mode].pace) {
       set('#runPace', st.km > 0 ? st.avgKmh.toFixed(1) : '--');
     } else {
       set('#runPace', st.km > 0 ? `${pad(st.paceMin)}'${pad(st.paceSec)}"` : '--');
@@ -267,7 +272,7 @@
         <div class="run-stats">
           <div class="rstat-i"><div class="rstat-v" id="runTime">00:00</div><div class="rstat-l">时长</div></div>
           <div class="rstat-i"><div class="rstat-v" id="runKm">0.00</div><div class="rstat-l">公里</div></div>
-          <div class="rstat-i"><div class="rstat-v" id="runPace">--</div><div class="rstat-l">${sess.mode === 'ride' ? '均速 km/h' : '配速 /km'}</div></div>
+          <div class="rstat-i"><div class="rstat-v" id="runPace">--</div><div class="rstat-l">${MODES[sess.mode].pace ? '配速 /km' : '均速 km/h'}</div></div>
           <div class="rstat-i"><div class="rstat-v" id="runKcal">0</div><div class="rstat-l">千卡</div></div>
         </div>
         <p class="run-gps-msg" id="runGpsMsg" hidden></p>
@@ -309,7 +314,7 @@
     renderStatsDom();
     syncCtlBtn();
     if (sess.points.length) ensureMap();
-    if (resumed && (resumed.elapsed || resumed.points.length)) toast('已恢复上次' + (sess.mode === 'ride' ? '骑行' : '跑步'));
+    if (resumed && (resumed.elapsed || resumed.points.length)) toast('已恢复上次' + MODES[sess.mode].title);
   }
 
   function onToggle() {
@@ -359,7 +364,7 @@
         api('PUT', '/api/data', syncCollect()).catch(() => {});
       }
     } catch (e) {}
-    const label = sess.mode === 'ride' ? '骑行' : '跑步';
+    const label = MODES[sess.mode].title;
     teardown();
     toast(`${label}已保存 · ${rec.distanceKm} km · ${rec.kcal} 千卡`);
     if (typeof showTab === 'function') showTab('stats');
@@ -387,8 +392,16 @@
   const ICON_WALK = `<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4.9" r="1.7"/><path d="M12 7.7 11.3 13.2"/><path d="M12.2 8.9 14.1 12"/><path d="M11.6 8.9 9.5 11.6"/><path d="M11.3 13.2 14 16.4 15 20.2"/><path d="M11.3 13.2 8.9 16.6 7 20.2"/></svg>`;
   const ICON_BIKE = `<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.2" cy="17.2" r="3.2"/><circle cx="17.8" cy="17.2" r="3.2"/><path d="M6.2 17.2 9.8 10.6 14.8 9.8"/><path d="M14.8 9.8 17.8 17.2"/><path d="M9.8 10.6 11.7 14.6 6.2 17.2"/><path d="M13.9 8.9h1.8"/></svg>`;
   const ICON_HIKE = `<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="16.8" cy="5.6" r="1.5"/><path d="m3.4 19 5.7-9.2 3.7 5.3 2.2-3.5L20.6 19z"/></svg>`;
+  /* 越野跑：跑者 + 虚线小径 */
+  const ICON_TRAIL = `<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="13.6" cy="4.4" r="1.7"/><path d="M12.5 7.2 10.3 11.8"/><path d="M12.7 8 15.9 9 14.6 11.2"/><path d="M11.9 7.8 8.7 9 7.7 11.4"/><path d="M10.3 11.8 13.5 12.6 14.8 16.4"/><path d="M10.3 11.8 7.1 14.6 5.5 18.4"/><path d="M2.8 20.6h3.4M9.3 20.6h3.4M15.8 20.6h3.4"/></svg>`;
+  /* 登山：持杖攀登人形 */
+  const ICON_MOUNTAIN = `<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="4.6" r="1.6"/><path d="M11 7.4 10.4 12.4"/><path d="M11.2 8.5 14.2 10.4"/><path d="M10.7 8.5 8.1 10.7"/><path d="M10.4 12.4 13 15.5 14.2 19.4"/><path d="M10.4 12.4 8.4 15.7 6.8 19.4"/><path d="M15.2 9.4 17.2 19.4"/></svg>`;
+  /* 轮滑：轮滑鞋 + 双轮 */
+  const ICON_SKATE = `<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4.2V13h12.4c1.5 0 2.7 1.2 2.7 2.7 0 .8-.7 1.5-1.5 1.5H5z"/><path d="M9 8h3.4M9 10.8h3.4"/><circle cx="8" cy="19.4" r="1.7"/><circle cx="15.6" cy="19.4" r="1.7"/></svg>`;
+  /* 滑雪：滑行者 + 雪道弧线 */
+  const ICON_SKI = `<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="14.2" cy="4.4" r="1.6"/><path d="M13.2 7.3 10.2 11.3 13.2 13.3 15.7 17.3"/><path d="M13.2 7.3 16.7 8.8"/><path d="M10.2 11.3 7.2 9.8"/><path d="M13.2 13.3 10.6 17.3"/><path d="M2.8 20.2c4.4 1.8 14 1.8 18.4-1.2"/></svg>`;
 
-  const TAG_TXT = { run: '跑步', walk: '健走', ride: '骑行', hike: '徒步' };
+  const TAG_TXT = { run: '跑步', walk: '健走', ride: '骑行', hike: '徒步', trail: '越野', mountain: '登山', skate: '轮滑', ski: '滑雪' };
   function historyHTML() {
     const list = records.filter(r => TAG_TXT[r.type]).slice(0, 8);
     if (!list.length) return '<div class="empty" style="padding:24px 16px">还没有户外运动记录<br>选择一项运动，开始第一次吧</div>';
@@ -423,6 +436,22 @@
           <button class="od-tile" data-od="start" data-mode="hike">
             <span class="od-ic hike">${ICON_HIKE}</span>
             <b>徒步</b><small>山野探索</small>
+          </button>
+          <button class="od-tile" data-od="start" data-mode="trail">
+            <span class="od-ic trail">${ICON_TRAIL}</span>
+            <b>越野跑</b><small>复杂地形</small>
+          </button>
+          <button class="od-tile" data-od="start" data-mode="mountain">
+            <span class="od-ic mountain">${ICON_MOUNTAIN}</span>
+            <b>登山</b><small>向山而行</small>
+          </button>
+          <button class="od-tile" data-od="start" data-mode="skate">
+            <span class="od-ic skate">${ICON_SKATE}</span>
+            <b>轮滑</b><small>城市刷街</small>
+          </button>
+          <button class="od-tile" data-od="start" data-mode="ski">
+            <span class="od-ic ski">${ICON_SKI}</span>
+            <b>滑雪</b><small>雪道飞驰</small>
           </button>
         </div>
         <div class="card">
