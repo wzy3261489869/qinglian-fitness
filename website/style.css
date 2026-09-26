@@ -2183,6 +2183,10 @@ body.sheet-open { overflow: hidden; }
 .od-ic.mountain { background: rgba(124, 58, 237, .12); color: #7c3aed; }
 .od-ic.skate    { background: rgba(236, 72, 153, .12); color: #ec4899; }
 .od-ic.ski      { background: rgba(14, 165, 233, .12); color: #0ea5e9; }
+.od-ic.kayak    { background: rgba(13, 148, 136, .12); color: #0d9488; }
+.od-ic.golf     { background: rgba(79, 70, 229, .12);  color: #4f46e5; }
+.od-ic.football { background: rgba(220, 38, 38, .12);  color: #dc2626; }
+.od-ic.tennis   { background: rgba(192, 38, 211, .12); color: #c026d3; }
 
 /* 最近户外运动列表 */
 .od-hi {
@@ -2203,6 +2207,10 @@ body.sheet-open { overflow: hidden; }
 .od-tag.mountain { color: #7c3aed; background: rgba(124, 58, 237, .12); }
 .od-tag.skate    { color: #ec4899; background: rgba(236, 72, 153, .12); }
 .od-tag.ski      { color: #0ea5e9; background: rgba(14, 165, 233, .12); }
+.od-tag.kayak    { color: #0d9488; background: rgba(13, 148, 136, .12); }
+.od-tag.golf     { color: #4f46e5; background: rgba(79, 70, 229, .12); }
+.od-tag.football { color: #dc2626; background: rgba(220, 38, 38, .12); }
+.od-tag.tennis   { color: #c026d3; background: rgba(192, 38, 211, .12); }
 .od-hi-km {
   font-size: 15px; font-weight: 600; color: var(--text-1);
   font-variant-numeric: tabular-nums;

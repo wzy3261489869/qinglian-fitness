@@ -482,6 +482,10 @@
     { id: 'mtn1',   name: '登顶时刻',   desc: '完成第 1 次户外登山',  color: '#7c3aed', glyph: GLYPHS.mountain, test: d => d.mountains >= 1 },
     { id: 'skate1', name: '刷街玩家',   desc: '完成第 1 次户外轮滑',  color: '#ec4899', glyph: GLYPHS.bolt,    test: d => d.skates >= 1 },
     { id: 'ski1',   name: '雪道新星',   desc: '完成第 1 次户外滑雪',  color: '#0ea5e9', glyph: GLYPHS.mountain, test: d => d.skis >= 1 },
+    { id: 'kayak1', name: '激流勇进',   desc: '完成第 1 次户外皮划艇', color: '#0d9488', glyph: GLYPHS.bolt,   test: d => d.kayaks >= 1 },
+    { id: 'golf1',  name: '优雅挥杆',   desc: '完成第 1 次户外高尔夫', color: '#4f46e5', glyph: GLYPHS.image,  test: d => d.golfs >= 1 },
+    { id: 'fb1',    name: '绿茵首秀',   desc: '完成第 1 次户外足球',  color: '#dc2626', glyph: GLYPHS.bolt,   test: d => d.footballs >= 1 },
+    { id: 'tennis1',name: '网球新星',   desc: '完成第 1 次户外网球',  color: '#c026d3', glyph: GLYPHS.bolt,   test: d => d.tennises >= 1 },
     { id: 'poster', name: '高光时刻',   desc: '生成并下载训练海报',   color: '#ec4899', glyph: GLYPHS.image,  test: d => d.poster },
     { id: 'body1',  name: '了解自己',   desc: '第 1 次记录体脂 / 围度', color: '#7c3aed', glyph: GLYPHS.ruler, test: d => d.body >= 1 }
   ];
@@ -502,6 +506,10 @@
       mountains: records.filter(r => r.type === 'mountain').length,
       skates: records.filter(r => r.type === 'skate').length,
       skis: records.filter(r => r.type === 'ski').length,
+      kayaks: records.filter(r => r.type === 'kayak').length,
+      golfs: records.filter(r => r.type === 'golf').length,
+      footballs: records.filter(r => r.type === 'football').length,
+      tennises: records.filter(r => r.type === 'tennis').length,
       poster: !!store.get('achPoster', false),
       body: Object.keys(store.get('bodyMap', {}) || {}).length
     };

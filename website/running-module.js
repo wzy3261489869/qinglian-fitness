@@ -1,5 +1,5 @@
 /* =====================================================================
- * 户外运动模块（跑步 / 健走 / 骑行 / 徒步 / 越野跑 / 登山 / 轮滑 / 滑雪）
+ * 户外运动模块（跑步 / 健走 / 骑行 / 徒步 / 越野跑 / 登山 / 轮滑 / 滑雪 / 皮划艇 / 高尔夫 / 足球 / 网球）
  * 架构：经典脚本 + window.RunModule 命名空间 + document 级事件委托
  * 能力：GPS 轨迹（Leaflet + 类苹果风浅色底图，加载失败 SVG 兜底）、
  *   时间戳计时、里程（haversine + 精度/抖动/漂移过滤）、
@@ -21,7 +21,11 @@
     trail:    { title: '户外越野跑', startText: '开始越野', kcalK: 1.1,   vMax: 10, pace: true },
     mountain: { title: '户外登山',   startText: '开始登山', kcalK: 0.65,  vMax: 6,  pace: true },
     skate:    { title: '户外轮滑',   startText: '开始轮滑', kcalK: 0.55,  vMax: 30, pace: false },
-    ski:      { title: '户外滑雪',   startText: '开始滑雪', kcalK: 0.5,   vMax: 40, pace: false }
+    ski:      { title: '户外滑雪',   startText: '开始滑雪', kcalK: 0.5,   vMax: 40, pace: false },
+    kayak:    { title: '户外皮划艇', startText: '开始划行', kcalK: 0.5,   vMax: 8,  pace: false },
+    golf:     { title: '户外高尔夫', startText: '开始打球', kcalK: 0.3,   vMax: 10, pace: false },
+    football: { title: '户外足球',   startText: '开始踢球', kcalK: 0.9,   vMax: 12, pace: false },
+    tennis:   { title: '户外网球',   startText: '开始挥拍', kcalK: 0.8,   vMax: 12, pace: false }
   };
 
   let sess = null;          // { mode, elapsed, runStart, running, points, distance }
@@ -400,8 +404,16 @@
   const ICON_SKATE = `<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4.2V13h12.4c1.5 0 2.7 1.2 2.7 2.7 0 .8-.7 1.5-1.5 1.5H5z"/><path d="M9 8h3.4M9 10.8h3.4"/><circle cx="8" cy="19.4" r="1.7"/><circle cx="15.6" cy="19.4" r="1.7"/></svg>`;
   /* 滑雪：滑行者 + 雪道弧线 */
   const ICON_SKI = `<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="14.2" cy="4.4" r="1.6"/><path d="M13.2 7.3 10.2 11.3 13.2 13.3 15.7 17.3"/><path d="M13.2 7.3 16.7 8.8"/><path d="M10.2 11.3 7.2 9.8"/><path d="M13.2 13.3 10.6 17.3"/><path d="M2.8 20.2c4.4 1.8 14 1.8 18.4-1.2"/></svg>`;
+  /* 皮划艇：划手 + 斜桨 + 水波 */
+  const ICON_KAYAK = `<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5.8" r="1.6"/><path d="M12 8.5v4"/><path d="M4.6 6.6 19.4 15.4"/><path d="M3 13.6c2 1.4 4-1.4 6 0s4-1.4 6 0 4-1.4 6 0"/><path d="M3 18.4c2 1.4 4-1.4 6 0s4-1.4 6 0 4-1.4 6 0"/></svg>`;
+  /* 高尔夫：球洞旗 + 果岭 */
+  const ICON_GOLF = `<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M11.5 3.5V18"/><path d="M11.5 4h6.2l-2.1 2.6 2.1 2.6h-6.2"/><ellipse cx="11.5" cy="19.4" rx="6" ry="1.9"/><circle cx="17.6" cy="16.8" r="1"/></svg>`;
+  /* 足球：五边形 + 缝线 */
+  const ICON_FOOTBALL = `<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.4l3.5 2.5-1.3 4.1H9.8l-1.3-4.1z"/><path d="M12 3.5v3.9M18.6 10.4l3.1-1M15.4 14l2 2.8M8.6 14l-2 2.8M5.4 10.4l-3.1-1"/></svg>`;
+  /* 网球：圆球 + 双侧弧线缝线 */
+  const ICON_TENNIS = `<svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M5.2 6.2c3.8 2.2 3.8 9.4 0 11.6M18.8 6.2c-3.8 2.2-3.8 9.4 0 11.6"/></svg>`;
 
-  const TAG_TXT = { run: '跑步', walk: '健走', ride: '骑行', hike: '徒步', trail: '越野', mountain: '登山', skate: '轮滑', ski: '滑雪' };
+  const TAG_TXT = { run: '跑步', walk: '健走', ride: '骑行', hike: '徒步', trail: '越野', mountain: '登山', skate: '轮滑', ski: '滑雪', kayak: '皮划艇', golf: '高尔夫', football: '足球', tennis: '网球' };
   function historyHTML() {
     const list = records.filter(r => TAG_TXT[r.type]).slice(0, 8);
     if (!list.length) return '<div class="empty" style="padding:24px 16px">还没有户外运动记录<br>选择一项运动，开始第一次吧</div>';
@@ -452,6 +464,22 @@
           <button class="od-tile" data-od="start" data-mode="ski">
             <span class="od-ic ski">${ICON_SKI}</span>
             <b>滑雪</b><small>雪道飞驰</small>
+          </button>
+          <button class="od-tile" data-od="start" data-mode="kayak">
+            <span class="od-ic kayak">${ICON_KAYAK}</span>
+            <b>皮划艇</b><small>水上竞速</small>
+          </button>
+          <button class="od-tile" data-od="start" data-mode="golf">
+            <span class="od-ic golf">${ICON_GOLF}</span>
+            <b>高尔夫</b><small>球场漫步</small>
+          </button>
+          <button class="od-tile" data-od="start" data-mode="football">
+            <span class="od-ic football">${ICON_FOOTBALL}</span>
+            <b>足球</b><small>全场飞奔</small>
+          </button>
+          <button class="od-tile" data-od="start" data-mode="tennis">
+            <span class="od-ic tennis">${ICON_TENNIS}</span>
+            <b>网球</b><small>底线拉锯</small>
           </button>
         </div>
         <div class="card">
